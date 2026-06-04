@@ -1,0 +1,27 @@
+# ─── Node.js / Next.js ───────────────────────────────
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+
+# ─── Variables d'environnement ───────────────────────
+.env
+.env.local
+.env.*.local
+frontend/.env.local
+backend/.env
+
+# ─── Go ──────────────────────────────────────────────
+backend/bin/
+*.exe
+*.out
+
+# ─── Système ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── IDE ─────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
