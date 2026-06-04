@@ -42,6 +42,23 @@ Elle couvre :
 
 ---
 
+## ENVIRONNEMENT LOCAL
+
+PostgreSQL tourne dans un conteneur Docker — aucune installation locale requise.
+Un `docker-compose.dev.yml` à la racine du projet fournit la base de données pour le développement.
+
+Commandes utiles :
+- `docker compose -f docker-compose.dev.yml up -d` — démarrer la base
+- `docker compose -f docker-compose.dev.yml down` — arrêter la base
+- `docker compose -f docker-compose.dev.yml down -v` — arrêter + supprimer les données
+
+La `DATABASE_URL` dans `backend/.env` pointe vers ce conteneur :
+```
+DATABASE_URL=postgresql://digicampus:digicampus@localhost:5432/digicampus
+```
+
+---
+
 ## STRUCTURE DU REPO (monorepo)
 
 ```
@@ -322,31 +339,31 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 0 — Initialisation du projet
+### ÉTAPE 0 — Initialisation du projet ✅
 **Objectif** : Repo propre, structure monorepo en place, environnement prêt.
 
-- [ ] Nettoyage du repo existant
-- [ ] Création de la structure des dossiers `frontend/` et `backend/`
-- [ ] Initialisation Next.js dans `frontend/`
-- [ ] Initialisation du module Go dans `backend/`
-- [ ] Création du `.gitignore` racine
-- [ ] Création du `README.md`
-- [ ] Premier commit `chore: initialisation du monorepo DigiCampus`
+- [x] Nettoyage du repo existant
+- [x] Création de la structure des dossiers `frontend/` et `backend/`
+- [x] Initialisation Next.js dans `frontend/`
+- [x] Initialisation du module Go dans `backend/`
+- [x] Création du `.gitignore` racine
+- [ ] ~~Création du `README.md`~~ — non nécessaire (décision développeur)
+- [x] Premier commit `chore: initialisation du monorepo DigiCampus`
 
 ---
 
-### ÉTAPE 1 — Base de données & modèle de données
+### ÉTAPE 1 — Base de données & modèle de données ✅
 **Objectif** : Schéma PostgreSQL complet, migrations prêtes.
 
-- [ ] Installation et configuration de la connexion PostgreSQL (`pkg/database/`)
-- [ ] Configuration godotenv + vérification des variables au démarrage
-- [ ] Migration : table `users` (id, email, password_hash, role, department, is_active, created_at)
-- [ ] Migration : table `spaces` (id, name, type, capacity, seats, equipment_fixed, is_active)
-- [ ] Migration : table `bookings` (id, space_id, user_id, program, start_time, duration, participants, status, is_urgent)
-- [ ] Migration : table `equipment` (id, type, name, status, assigned_to, return_date)
-- [ ] Migration : table `equipment_requests` (id, equipment_id, user_id, type, mission, location, start_date, end_date, status)
-- [ ] Migration : table `presence` (id, user_id, space_id, date, declared_at)
-- [ ] Script de seed pour les données de test
+- [x] Installation et configuration de la connexion PostgreSQL (`pkg/database/`)
+- [x] Configuration godotenv + vérification des variables au démarrage
+- [x] Migration : table `users` (id, email, password_hash, role, department, is_active, created_at)
+- [x] Migration : table `spaces` (id, name, type, capacity, seats, equipment_fixed, is_active)
+- [x] Migration : table `bookings` (id, space_id, user_id, program, start_time, duration, participants, status, is_urgent)
+- [x] Migration : table `equipment` (id, type, name, status, assigned_to, return_date)
+- [x] Migration : table `equipment_requests` (id, equipment_id, user_id, type, mission, location, start_date, end_date, status)
+- [x] Migration : table `presence` (id, user_id, space_id, date, declared_at)
+- [x] Script de seed pour les données de test
 
 ---
 
@@ -509,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 0 — Initialisation
-Dernière action : —
+Étape en cours  : ÉTAPE 2 — Authentification & gestion des rôles
+Dernière action : ÉTAPE 1 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```
