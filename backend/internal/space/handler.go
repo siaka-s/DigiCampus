@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -90,6 +91,20 @@ func (h *Handler) GetOccupancy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, items, "")
+}
+
+func (h *Handler) GetAvailable(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	startTime, _ := time.Parse(time.RFC3339, q.Get("start_time"))
+	duration, _ := strconv.Atoi(q.Get("duration"))
+	participants, _ := strconv.Atoi(q.Get("participants"))
+	spaces, err := h.svc.FindAvailable(r.Context(), startTime, duration, participants)
+	if err != nil {
+		slog.Error("find available", "erreur", err)
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, spaces, "")
 }
 
 func (h *Handler) DeactivateSpace(w http.ResponseWriter, r *http.Request) {

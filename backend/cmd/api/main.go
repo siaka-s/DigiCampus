@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/digifemmes/digicampus/internal/booking"
 	"github.com/digifemmes/digicampus/internal/space"
 	"github.com/digifemmes/digicampus/internal/user"
 	"github.com/digifemmes/digicampus/pkg/database"
@@ -81,6 +82,27 @@ func main() {
 	spaceAdminMux.HandleFunc("PATCH /api/v1/spaces/{id}", spaceHandler.UpdateSpace)
 	spaceAdminMux.HandleFunc("PATCH /api/v1/spaces/{id}/deactivate", spaceHandler.DeactivateSpace)
 	mux.Handle("/api/v1/spaces/", middleware.Auth(middleware.RequireRole("admin", "super_admin")(spaceAdminMux)))
+
+	// Disponibilité des salles — tous les connectés
+	mux.Handle("/api/v1/spaces/available", middleware.Auth(http.HandlerFunc(spaceHandler.GetAvailable)))
+
+	// Réservations
+	bookingRepo    := booking.NewRepository(pool)
+	bookingSvc     := booking.NewService(bookingRepo, spaceRepo)
+	bookingHandler := booking.NewHandler(bookingSvc)
+
+	bookingMux := http.NewServeMux()
+	bookingMux.HandleFunc("POST /api/v1/bookings", bookingHandler.Create)
+	bookingMux.HandleFunc("GET /api/v1/bookings", bookingHandler.List)
+	bookingMux.HandleFunc("POST /api/v1/bookings/urgent", bookingHandler.CreateUrgent)
+	mux.Handle("/api/v1/bookings", middleware.Auth(bookingMux))
+	mux.Handle("/api/v1/bookings/urgent", middleware.Auth(bookingMux))
+
+	bookingAdminMux := http.NewServeMux()
+	bookingAdminMux.HandleFunc("PATCH /api/v1/bookings/{id}/validate", bookingHandler.Validate)
+	bookingAdminMux.HandleFunc("PATCH /api/v1/bookings/{id}/refuse", bookingHandler.Refuse)
+	bookingAdminMux.HandleFunc("PATCH /api/v1/bookings/{id}/cancel", bookingHandler.Cancel)
+	mux.Handle("/api/v1/bookings/", middleware.Auth(bookingAdminMux))
 
 	handler := middleware.Security(middleware.CORS(mux))
 

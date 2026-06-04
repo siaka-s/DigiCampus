@@ -423,20 +423,20 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 6 — Réservations de salle
+### ÉTAPE 6 — Réservations de salle ✅
 **Objectif** : Cycle complet de réservation (demande → validation → affichage).
 
-- [ ] Route `GET /api/v1/spaces/available?date=&duration=&participants=`
-- [ ] Route `POST /api/v1/bookings` — soumettre une demande
-- [ ] Route `GET /api/v1/bookings` — liste des demandes
-- [ ] Route `PATCH /api/v1/bookings/:id/validate` — valider (admin)
-- [ ] Route `PATCH /api/v1/bookings/:id/refuse` — refuser avec commentaire (admin)
-- [ ] Route `PATCH /api/v1/bookings/:id/cancel` — annuler
-- [ ] Route `POST /api/v1/bookings/urgent` — demande urgente
-- [ ] Page collaborateur : formulaire de demande (React Hook Form + Zod)
-- [ ] Page collaborateur : liste de mes demandes
-- [ ] Page admin : tableau de bord des demandes en attente
-- [ ] Vue hebdomadaire d'un espace
+- [x] Route `GET /api/v1/spaces/available?start_time=&duration=&participants=`
+- [x] Route `POST /api/v1/bookings` — soumettre une demande
+- [x] Route `GET /api/v1/bookings` — liste des demandes
+- [x] Route `PATCH /api/v1/bookings/:id/validate` — valider (admin)
+- [x] Route `PATCH /api/v1/bookings/:id/refuse` — refuser avec commentaire (admin)
+- [x] Route `PATCH /api/v1/bookings/:id/cancel` — annuler
+- [x] Route `POST /api/v1/bookings/urgent` — demande urgente
+- [x] Page collaborateur : formulaire de demande (React Hook Form + Zod)
+- [x] Page collaborateur : liste de mes demandes
+- [x] Page admin : tableau de bord des demandes en attente
+- [ ] Vue hebdomadaire d'un espace — reportée (placeholder actif)
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 6 — Réservations de salle
-Dernière action : ÉTAPE 5 complétée ✅
+Étape en cours  : ÉTAPE 7 — Affectation directe & récurrence
+Dernière action : ÉTAPE 6 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```

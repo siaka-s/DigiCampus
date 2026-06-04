@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -98,6 +99,60 @@ type OccupancyItem struct {
 	Bookings       []interface{} `json:"bookings"`
 	PresenceCount  int           `json:"presence_count"`
 	IsOverCapacity bool          `json:"is_over_capacity"`
+}
+
+func (r *Repository) FindAvailable(ctx context.Context, startTime time.Time, duration, participants int) ([]*Space, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, name, type, capacity, seats, equipment_fixed, is_active
+		 FROM spaces
+		 WHERE is_active = true
+		   AND type = 'salle_programme'
+		   AND capacity >= $1
+		   AND id NOT IN (
+		     SELECT space_id FROM bookings
+		     WHERE status IN ('en_attente','validee')
+		       AND start_time < $2 + ($3 * interval '1 minute')
+		       AND start_time + (duration * interval '1 minute') > $2
+		   )
+		 ORDER BY capacity ASC`,
+		participants, startTime, duration,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var spaces []*Space
+	for rows.Next() {
+		s := &Space{}
+		if err := rows.Scan(&s.ID, &s.Name, &s.Type, &s.Capacity, &s.Seats, &s.EquipmentFixed, &s.IsActive); err != nil {
+			return nil, err
+		}
+		spaces = append(spaces, s)
+	}
+	return spaces, nil
+}
+
+func (r *Repository) GetCapacity(ctx context.Context, spaceID string) (int, error) {
+	var capacity int
+	err := r.db.QueryRow(ctx,
+		`SELECT capacity FROM spaces WHERE id=$1 AND is_active=true`,
+		spaceID,
+	).Scan(&capacity)
+	return capacity, err
+}
+
+func (r *Repository) HasConflict(ctx context.Context, spaceID string, startTime time.Time, duration int, excludeID string) (bool, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM bookings
+		 WHERE space_id=$1
+		   AND status IN ('en_attente','validee')
+		   AND id != COALESCE(NULLIF($4,''), '00000000-0000-0000-0000-000000000000')
+		   AND start_time < $2 + ($3 * interval '1 minute')
+		   AND start_time + (duration * interval '1 minute') > $2`,
+		spaceID, startTime, duration, excludeID,
+	).Scan(&count)
+	return count > 0, err
 }
 
 func (r *Repository) GetOccupancy(ctx context.Context, date string) ([]*OccupancyItem, error) {

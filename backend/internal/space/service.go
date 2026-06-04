@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 var (
@@ -84,4 +85,8 @@ func (s *Service) Deactivate(ctx context.Context, id string) error {
 
 func (s *Service) GetOccupancy(ctx context.Context, date string) ([]*OccupancyItem, error) {
 	return s.repo.GetOccupancy(ctx, date)
+}
+
+func (s *Service) FindAvailable(ctx context.Context, startTime time.Time, duration, participants int) ([]*Space, error) {
+	return s.repo.FindAvailable(ctx, startTime, duration, participants)
 }

@@ -30,4 +30,9 @@ export const spacesApi = {
 
   deactivate: (id: string) =>
     apiClient.patch(`/api/v1/spaces/${id}/deactivate`, {}),
+
+  available: (startTime: string, duration: number, participants: number) =>
+    apiClient.get<Space[]>(
+      `/api/v1/spaces/available?start_time=${encodeURIComponent(startTime)}&duration=${duration}&participants=${participants}`
+    ),
 }
