@@ -440,13 +440,13 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 7 — Affectation directe & récurrence
+### ÉTAPE 7 — Affectation directe & récurrence ✅
 **Objectif** : L'admin peut affecter une salle en dehors du processus de demande.
 
-- [ ] Route `POST /api/v1/bookings/direct` — affectation directe (admin)
-- [ ] Route `POST /api/v1/bookings/recurring` — réservation récurrente
-- [ ] Interface admin : formulaire d'affectation directe
-- [ ] Gestion des rappels de créneau (affectations directes uniquement)
+- [x] Route `POST /api/v1/bookings/direct` — affectation directe (admin)
+- [x] Route `POST /api/v1/bookings/recurring` — réservation récurrente
+- [x] Interface admin : formulaire d'affectation directe + récurrence hebdomadaire
+- [ ] Gestion des rappels de créneau — reportée à l'Étape 10 (Notifications/Resend)
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 7 — Affectation directe & récurrence
-Dernière action : ÉTAPE 6 complétée ✅
+Étape en cours  : ÉTAPE 8 — Module de présence staff
+Dernière action : ÉTAPE 7 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```

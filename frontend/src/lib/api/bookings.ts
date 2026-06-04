@@ -41,4 +41,24 @@ export const bookingsApi = {
 
   cancel: (id: string) =>
     apiClient.patch(`/api/v1/bookings/${id}/cancel`, {}),
+
+  createDirect: (input: {
+    space_id: string
+    program: string
+    start_time: string
+    duration: number
+    participants: number
+  }) => apiClient.post<Booking>("/api/v1/bookings/direct", input),
+
+  createRecurring: (input: {
+    space_id: string
+    program: string
+    start_date: string
+    end_date: string
+    start_hour: number
+    start_minute: number
+    duration: number
+    participants: number
+    days_of_week: number[]
+  }) => apiClient.post<Booking[]>("/api/v1/bookings/recurring", input),
 }

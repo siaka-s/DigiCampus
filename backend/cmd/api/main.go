@@ -102,6 +102,10 @@ func main() {
 	bookingAdminMux.HandleFunc("PATCH /api/v1/bookings/{id}/validate", bookingHandler.Validate)
 	bookingAdminMux.HandleFunc("PATCH /api/v1/bookings/{id}/refuse", bookingHandler.Refuse)
 	bookingAdminMux.HandleFunc("PATCH /api/v1/bookings/{id}/cancel", bookingHandler.Cancel)
+	bookingAdminMux.HandleFunc("POST /api/v1/bookings/direct", bookingHandler.CreateDirect)
+	bookingAdminMux.HandleFunc("POST /api/v1/bookings/recurring", bookingHandler.CreateRecurring)
+	mux.Handle("/api/v1/bookings/direct", middleware.Auth(middleware.RequireRole("admin", "super_admin")(bookingAdminMux)))
+	mux.Handle("/api/v1/bookings/recurring", middleware.Auth(middleware.RequireRole("admin", "super_admin")(bookingAdminMux)))
 	mux.Handle("/api/v1/bookings/", middleware.Auth(bookingAdminMux))
 
 	handler := middleware.Security(middleware.CORS(mux))

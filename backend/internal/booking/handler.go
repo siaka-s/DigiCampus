@@ -129,6 +129,45 @@ func (h *Handler) Refuse(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, nil, "réservation refusée")
 }
 
+func (h *Handler) CreateDirect(w http.ResponseWriter, r *http.Request) {
+	var input DirectInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, nil, "corps invalide")
+		return
+	}
+	adminID, _ := r.Context().Value(middleware.ContextUserID).(string)
+	b, err := h.svc.CreateDirect(r.Context(), input, adminID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrCapacityExceeded):
+			writeJSON(w, http.StatusUnprocessableEntity, nil, err.Error())
+		case errors.Is(err, ErrSpaceNotAvailable):
+			writeJSON(w, http.StatusConflict, nil, err.Error())
+		default:
+			slog.Error("create direct", "erreur", err)
+			writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, b, "")
+}
+
+func (h *Handler) CreateRecurring(w http.ResponseWriter, r *http.Request) {
+	var input RecurringInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, nil, "corps invalide")
+		return
+	}
+	adminID, _ := r.Context().Value(middleware.ContextUserID).(string)
+	bookings, err := h.svc.CreateRecurring(r.Context(), input, adminID)
+	if err != nil {
+		slog.Error("create recurring", "erreur", err)
+		writeJSON(w, http.StatusInternalServerError, nil, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, bookings, "")
+}
+
 func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	userID, _ := r.Context().Value(middleware.ContextUserID).(string)

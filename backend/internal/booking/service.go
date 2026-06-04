@@ -105,6 +105,92 @@ func (s *Service) Refuse(ctx context.Context, id, comment string) error {
 	return s.repo.UpdateStatus(ctx, id, "refusee", &comment)
 }
 
+type DirectInput struct {
+	SpaceID      string    `json:"space_id"     validate:"required"`
+	Program      string    `json:"program"      validate:"required"`
+	StartTime    time.Time `json:"start_time"   validate:"required"`
+	Duration     int       `json:"duration"     validate:"required,min=30"`
+	Participants int       `json:"participants" validate:"required,min=1"`
+}
+
+type RecurringInput struct {
+	SpaceID      string `json:"space_id"     validate:"required"`
+	Program      string `json:"program"      validate:"required"`
+	StartDate    string `json:"start_date"   validate:"required"`
+	EndDate      string `json:"end_date"     validate:"required"`
+	StartHour    int    `json:"start_hour"`
+	StartMinute  int    `json:"start_minute"`
+	Duration     int    `json:"duration"     validate:"required,min=30"`
+	Participants int    `json:"participants" validate:"required,min=1"`
+	DaysOfWeek   []int  `json:"days_of_week" validate:"required"`
+}
+
+func (s *Service) CreateDirect(ctx context.Context, input DirectInput, adminID string) (*Booking, error) {
+	capacity, err := s.spaceRepo.GetCapacity(ctx, input.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if input.Participants > capacity {
+		return nil, ErrCapacityExceeded
+	}
+	conflict, err := s.spaceRepo.HasConflict(ctx, input.SpaceID, input.StartTime, input.Duration, "")
+	if err != nil {
+		return nil, err
+	}
+	if conflict {
+		return nil, ErrSpaceNotAvailable
+	}
+	b, err := s.repo.Create(ctx, &Booking{
+		SpaceID:      input.SpaceID,
+		UserID:       adminID,
+		Program:      input.Program,
+		StartTime:    input.StartTime,
+		Duration:     input.Duration,
+		Participants: input.Participants,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return b, s.repo.UpdateStatus(ctx, b.ID, "validee", nil)
+}
+
+func (s *Service) CreateRecurring(ctx context.Context, input RecurringInput, adminID string) ([]*Booking, error) {
+	start, err := time.Parse("2006-01-02", input.StartDate)
+	if err != nil {
+		return nil, errors.New("date de début invalide")
+	}
+	end, err := time.Parse("2006-01-02", input.EndDate)
+	if err != nil {
+		return nil, errors.New("date de fin invalide")
+	}
+
+	daySet := map[int]bool{}
+	for _, d := range input.DaysOfWeek {
+		daySet[d] = true
+	}
+
+	var created []*Booking
+	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+		if !daySet[int(d.Weekday())] {
+			continue
+		}
+		slotTime := time.Date(d.Year(), d.Month(), d.Day(),
+			input.StartHour, input.StartMinute, 0, 0, time.UTC)
+		b, err := s.CreateDirect(ctx, DirectInput{
+			SpaceID:      input.SpaceID,
+			Program:      input.Program,
+			StartTime:    slotTime,
+			Duration:     input.Duration,
+			Participants: input.Participants,
+		}, adminID)
+		if err != nil {
+			continue
+		}
+		created = append(created, b)
+	}
+	return created, nil
+}
+
 func (s *Service) Cancel(ctx context.Context, id, userID, role string) error {
 	b, err := s.repo.FindByID(ctx, id)
 	if err != nil {
