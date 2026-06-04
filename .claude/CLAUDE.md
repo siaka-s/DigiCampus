@@ -367,20 +367,20 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 2 — Authentification & gestion des rôles
+### ÉTAPE 2 — Authentification & gestion des rôles ✅
 **Objectif** : Connexion, session, middleware de rôles fonctionnel.
 
-- [ ] Configuration Auth.js côté frontend (providers, callbacks, session)
-- [ ] Middleware Go JWT sur les routes protégées
-- [ ] Middleware Go rate limiting sur les routes publiques
-- [ ] Middleware Go headers de sécurité
-- [ ] Route `POST /api/v1/auth/register` — inscription (compte inactif, honeypot + délai min)
-- [ ] Route `POST /api/v1/auth/login` — connexion + génération token
-- [ ] Middleware frontend : redirection si non connecté
-- [ ] Middleware frontend : redirection si rôle insuffisant
-- [ ] Page de connexion (`/login`) — avec hCaptcha
-- [ ] Page d'inscription (`/register`) — avec hCaptcha + honeypot
-- [ ] Page d'attente de validation (`/pending`)
+- [x] Configuration Auth.js côté frontend (providers, callbacks, session)
+- [x] Middleware Go JWT sur les routes protégées
+- [x] Middleware Go rate limiting sur les routes publiques
+- [x] Middleware Go headers de sécurité
+- [x] Route `POST /api/v1/auth/register` — inscription (compte inactif, honeypot + délai min)
+- [x] Route `POST /api/v1/auth/login` — connexion + génération token
+- [x] Middleware frontend : redirection si non connecté
+- [x] Middleware frontend : redirection si rôle insuffisant
+- [x] Page de connexion (`/login`) — honeypot ✅ / hCaptcha reporté en fin de projet
+- [x] Page d'inscription (`/register`) — honeypot ✅ / hCaptcha reporté en fin de projet
+- [x] Page d'attente de validation (`/pending`)
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 2 — Authentification & gestion des rôles
-Dernière action : ÉTAPE 1 complétée ✅
+Étape en cours  : ÉTAPE 3 — Gestion des comptes (Super Admin)
+Dernière action : ÉTAPE 2 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```

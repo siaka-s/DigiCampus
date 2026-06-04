@@ -2,11 +2,14 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
 
+	"github.com/digifemmes/digicampus/internal/user"
 	"github.com/digifemmes/digicampus/pkg/database"
+	"github.com/digifemmes/digicampus/pkg/middleware"
 )
 
 var requiredEnvVars = []string{
@@ -36,5 +39,29 @@ func main() {
 	}
 	defer pool.Close()
 
-	slog.Info("serveur prêt", "port", os.Getenv("PORT"))
+	userRepo := user.NewRepository(pool)
+	userSvc := user.NewService(userRepo)
+	userHandler := user.NewHandler(userSvc)
+
+	mux := http.NewServeMux()
+
+	// Routes publiques
+	publicMux := http.NewServeMux()
+	publicMux.HandleFunc("POST /api/v1/auth/register", userHandler.Register)
+	publicMux.HandleFunc("POST /api/v1/auth/login", userHandler.Login)
+
+	mux.Handle("/api/v1/auth/", middleware.RateLimit(publicMux))
+
+	// Routes privées (JWT requis)
+	privateMux := http.NewServeMux()
+	mux.Handle("/api/v1/", middleware.Auth(privateMux))
+
+	handler := middleware.Security(middleware.CORS(mux))
+
+	addr := ":" + os.Getenv("PORT")
+	slog.Info("serveur démarré", "adresse", addr)
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		slog.Error("erreur serveur", "erreur", err)
+		os.Exit(1)
+	}
 }
