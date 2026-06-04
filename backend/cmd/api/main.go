@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/digifemmes/digicampus/internal/booking"
+	"github.com/digifemmes/digicampus/internal/presence"
 	"github.com/digifemmes/digicampus/internal/space"
 	"github.com/digifemmes/digicampus/internal/user"
 	"github.com/digifemmes/digicampus/pkg/database"
@@ -107,6 +108,21 @@ func main() {
 	mux.Handle("/api/v1/bookings/direct", middleware.Auth(middleware.RequireRole("admin", "super_admin")(bookingAdminMux)))
 	mux.Handle("/api/v1/bookings/recurring", middleware.Auth(middleware.RequireRole("admin", "super_admin")(bookingAdminMux)))
 	mux.Handle("/api/v1/bookings/", middleware.Auth(bookingAdminMux))
+
+	presenceRepo    := presence.NewRepository(pool)
+	presenceSvc     := presence.NewService(presenceRepo, spaceRepo)
+	presenceHandler := presence.NewHandler(presenceSvc)
+
+	presenceMux := http.NewServeMux()
+	presenceMux.HandleFunc("POST /api/v1/presence", presenceHandler.Declare)
+	presenceMux.HandleFunc("GET /api/v1/presence", presenceHandler.GetBySpace)
+	presenceMux.HandleFunc("GET /api/v1/presence/me", presenceHandler.GetMyPresence)
+	presenceMux.HandleFunc("PATCH /api/v1/presence/{id}", presenceHandler.Update)
+	presenceMux.HandleFunc("GET /api/v1/presence/capacity", presenceHandler.CheckOverCapacity)
+	mux.Handle("/api/v1/presence", middleware.Auth(presenceMux))
+	mux.Handle("/api/v1/presence/me", middleware.Auth(presenceMux))
+	mux.Handle("/api/v1/presence/capacity", middleware.Auth(presenceMux))
+	mux.Handle("/api/v1/presence/", middleware.Auth(presenceMux))
 
 	handler := middleware.Security(middleware.CORS(mux))
 

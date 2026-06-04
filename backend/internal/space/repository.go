@@ -132,6 +132,15 @@ func (r *Repository) FindAvailable(ctx context.Context, startTime time.Time, dur
 	return spaces, nil
 }
 
+func (r *Repository) GetSeats(ctx context.Context, spaceID string) (int, error) {
+	var seats int
+	err := r.db.QueryRow(ctx,
+		`SELECT seats FROM spaces WHERE id=$1 AND is_active=true`,
+		spaceID,
+	).Scan(&seats)
+	return seats, err
+}
+
 func (r *Repository) GetCapacity(ctx context.Context, spaceID string) (int, error) {
 	var capacity int
 	err := r.db.QueryRow(ctx,

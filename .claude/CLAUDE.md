@@ -450,16 +450,16 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 8 — Module de présence staff
+### ÉTAPE 8 — Module de présence staff ✅
 **Objectif** : Déclaration et suivi des présences dans les bureaux partagés.
 
-- [ ] Route `POST /api/v1/presence` — déclarer ses jours de présence
-- [ ] Route `GET /api/v1/presence?space_id=&week=` — présences d'un bureau sur une semaine
-- [ ] Route `PATCH /api/v1/presence/:id` — modifier une déclaration
-- [ ] Calcul automatique : présents déclarés vs places assises
-- [ ] Déclenchement alerte suroccupation
-- [ ] Page collaborateur : déclaration hebdomadaire de présence
-- [ ] Page admin : vue des présences par bureau
+- [x] Route `POST /api/v1/presence` — déclarer ses jours de présence
+- [x] Route `GET /api/v1/presence?space_id=&week=` — présences d'un bureau sur une semaine
+- [x] Route `PATCH /api/v1/presence/:id` — modifier une déclaration
+- [x] Calcul automatique : présents déclarés vs places assises
+- [x] Déclenchement alerte suroccupation (badge rouge + icône)
+- [x] Page collaborateur : déclaration hebdomadaire de présence
+- [x] Page admin : vue des présences par bureau
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 8 — Module de présence staff
-Dernière action : ÉTAPE 7 complétée ✅
+Étape en cours  : ÉTAPE 9 — Gestion du matériel IT
+Dernière action : ÉTAPE 8 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```
