@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/digifemmes/digicampus/internal/booking"
+	"github.com/digifemmes/digicampus/internal/equipment"
 	"github.com/digifemmes/digicampus/internal/presence"
 	"github.com/digifemmes/digicampus/internal/space"
 	"github.com/digifemmes/digicampus/internal/user"
@@ -123,6 +124,34 @@ func main() {
 	mux.Handle("/api/v1/presence/me", middleware.Auth(presenceMux))
 	mux.Handle("/api/v1/presence/capacity", middleware.Auth(presenceMux))
 	mux.Handle("/api/v1/presence/", middleware.Auth(presenceMux))
+
+	equipmentRepo    := equipment.NewRepository(pool)
+	equipmentSvc     := equipment.NewService(equipmentRepo)
+	equipmentHandler := equipment.NewHandler(equipmentSvc)
+
+	// Lecture équipements — tous les connectés
+	eqReadMux := http.NewServeMux()
+	eqReadMux.HandleFunc("GET /api/v1/equipment", equipmentHandler.ListEquipment)
+	eqReadMux.HandleFunc("GET /api/v1/equipment/requests", equipmentHandler.ListRequests)
+	mux.Handle("/api/v1/equipment", middleware.Auth(eqReadMux))
+	mux.Handle("/api/v1/equipment/requests", middleware.Auth(eqReadMux))
+
+	// Demandes collaborateurs
+	eqRequestMux := http.NewServeMux()
+	eqRequestMux.HandleFunc("POST /api/v1/equipment/requests", equipmentHandler.CreateRequest)
+	eqRequestMux.HandleFunc("POST /api/v1/equipment/rentals", equipmentHandler.CreateRequest)
+	mux.Handle("/api/v1/equipment/rentals", middleware.Auth(eqRequestMux))
+
+	// Écriture équipements — admin IT
+	eqAdminMux := http.NewServeMux()
+	eqAdminMux.HandleFunc("POST /api/v1/equipment", equipmentHandler.AddEquipment)
+	eqAdminMux.HandleFunc("PATCH /api/v1/equipment/{id}", equipmentHandler.UpdateEquipment)
+	eqAdminMux.HandleFunc("PATCH /api/v1/equipment/requests/{id}/validate", equipmentHandler.ValidateRequest)
+	eqAdminMux.HandleFunc("PATCH /api/v1/equipment/requests/{id}/refuse", equipmentHandler.RefuseRequest)
+	eqAdminMux.HandleFunc("PATCH /api/v1/equipment/rentals/{id}/close", equipmentHandler.CloseRental)
+	eqAdminMux.HandleFunc("GET /api/v1/equipment/overdue", equipmentHandler.GetOverdueRentals)
+	mux.Handle("/api/v1/equipment/overdue", middleware.Auth(middleware.RequireRole("admin", "super_admin", "admin_it")(eqAdminMux)))
+	mux.Handle("/api/v1/equipment/", middleware.Auth(middleware.RequireRole("admin", "super_admin", "admin_it")(eqAdminMux)))
 
 	handler := middleware.Security(middleware.CORS(mux))
 

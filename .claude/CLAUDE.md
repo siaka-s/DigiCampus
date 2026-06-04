@@ -463,23 +463,23 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 9 — Gestion du matériel IT
+### ÉTAPE 9 — Gestion du matériel IT ✅
 **Objectif** : Parc informatique, demandes internes et locations externes.
 
-- [ ] Route `GET /api/v1/equipment` — liste du parc IT
-- [ ] Route `POST /api/v1/equipment` — ajouter un ordinateur (admin)
-- [ ] Route `PATCH /api/v1/equipment/:id` — modifier l'état d'un ordinateur
-- [ ] Route `POST /api/v1/equipment/requests` — demande interne (mission)
-- [ ] Route `POST /api/v1/equipment/rentals` — location externe (client)
-- [ ] Route `GET /api/v1/equipment/requests` — liste des demandes IT
-- [ ] Route `PATCH /api/v1/equipment/requests/:id/validate` — valider (admin IT)
-- [ ] Route `PATCH /api/v1/equipment/requests/:id/refuse` — refuser (admin IT)
-- [ ] Route `PATCH /api/v1/equipment/rentals/:id/close` — clôturer une location
-- [ ] Page collaborateur : formulaire demande IT mission (React Hook Form + Zod)
-- [ ] Page collaborateur : formulaire location externe client
-- [ ] Page admin IT : tableau de bord des demandes en attente
-- [ ] Page admin IT : suivi du parc (statuts en temps réel)
-- [ ] Alerte retour matériel non clôturé à l'échéance
+- [x] Route `GET /api/v1/equipment` — liste du parc IT
+- [x] Route `POST /api/v1/equipment` — ajouter un ordinateur (admin)
+- [x] Route `PATCH /api/v1/equipment/:id` — modifier l'état d'un ordinateur
+- [x] Route `POST /api/v1/equipment/requests` — demande interne (mission)
+- [x] Route `POST /api/v1/equipment/rentals` — location externe (client)
+- [x] Route `GET /api/v1/equipment/requests` — liste des demandes IT
+- [x] Route `PATCH /api/v1/equipment/requests/:id/validate` — valider (admin IT)
+- [x] Route `PATCH /api/v1/equipment/requests/:id/refuse` — refuser (admin IT)
+- [x] Route `PATCH /api/v1/equipment/rentals/:id/close` — clôturer une location
+- [x] Page collaborateur : formulaire demande IT mission (React Hook Form + Zod)
+- [x] Page collaborateur : formulaire location externe client
+- [x] Page admin IT : tableau de bord des demandes en attente
+- [x] Page admin IT : suivi du parc (statuts en temps réel)
+- [x] Alerte retour matériel non clôturé à l'échéance
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 9 — Gestion du matériel IT
-Dernière action : ÉTAPE 8 complétée ✅
+Étape en cours  : ÉTAPE 10 — Notifications (Resend)
+Dernière action : ÉTAPE 9 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```
