@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/digifemmes/digicampus/internal/space"
 	"github.com/digifemmes/digicampus/internal/user"
 	"github.com/digifemmes/digicampus/pkg/database"
 	"github.com/digifemmes/digicampus/pkg/middleware"
@@ -62,6 +63,22 @@ func main() {
 
 	mux.Handle("/api/v1/users", middleware.Auth(middleware.RequireRole("super_admin")(adminMux)))
 	mux.Handle("/api/v1/users/", middleware.Auth(middleware.RequireRole("super_admin")(adminMux)))
+
+	spaceRepo    := space.NewRepository(pool)
+	spaceSvc     := space.NewService(spaceRepo)
+	spaceHandler := space.NewHandler(spaceSvc)
+
+	// Lecture espaces — tous les connectés
+	privateMux := http.NewServeMux()
+	privateMux.HandleFunc("GET /api/v1/spaces", spaceHandler.GetSpaces)
+	mux.Handle("/api/v1/spaces", middleware.Auth(privateMux))
+
+	// Écriture espaces — admin uniquement
+	spaceAdminMux := http.NewServeMux()
+	spaceAdminMux.HandleFunc("POST /api/v1/spaces", spaceHandler.CreateSpace)
+	spaceAdminMux.HandleFunc("PATCH /api/v1/spaces/{id}", spaceHandler.UpdateSpace)
+	spaceAdminMux.HandleFunc("PATCH /api/v1/spaces/{id}/deactivate", spaceHandler.DeactivateSpace)
+	mux.Handle("/api/v1/spaces/", middleware.Auth(middleware.RequireRole("admin", "super_admin")(spaceAdminMux)))
 
 	handler := middleware.Security(middleware.CORS(mux))
 

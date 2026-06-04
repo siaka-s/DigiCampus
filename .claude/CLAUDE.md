@@ -397,16 +397,16 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 4 — Référentiel des espaces
+### ÉTAPE 4 — Référentiel des espaces ✅
 **Objectif** : CRUD complet des espaces (salles + bureaux).
 
-- [ ] Route `GET /api/v1/spaces` — liste des espaces
-- [ ] Route `POST /api/v1/spaces` — créer un espace (admin)
-- [ ] Route `PATCH /api/v1/spaces/:id` — modifier un espace (admin)
-- [ ] Route `PATCH /api/v1/spaces/:id/deactivate` — désactiver un espace (admin)
-- [ ] Page admin : liste des espaces
-- [ ] Page admin : formulaire création/édition espace
-- [ ] Affichage du badge type (salle de programme / bureau individuel / bureau partagé)
+- [x] Route `GET /api/v1/spaces` — liste des espaces
+- [x] Route `POST /api/v1/spaces` — créer un espace (admin)
+- [x] Route `PATCH /api/v1/spaces/:id` — modifier un espace (admin)
+- [x] Route `PATCH /api/v1/spaces/:id/deactivate` — désactiver un espace (admin)
+- [x] Page admin : liste des espaces
+- [x] Page admin : formulaire création/édition espace (dialog inline)
+- [x] Affichage du badge type (salle de programme / bureau individuel / bureau partagé)
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 4 — Référentiel des espaces
-Dernière action : ÉTAPE 3 complétée ✅
+Étape en cours  : ÉTAPE 5 — Tableau de bord & vue d'accueil
+Dernière action : ÉTAPE 4 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```
