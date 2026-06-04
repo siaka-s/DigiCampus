@@ -81,3 +81,7 @@ func (s *Service) Update(ctx context.Context, id string, input UpdateInput) erro
 func (s *Service) Deactivate(ctx context.Context, id string) error {
 	return s.repo.SetActive(ctx, id, false)
 }
+
+func (s *Service) GetOccupancy(ctx context.Context, date string) ([]*OccupancyItem, error) {
+	return s.repo.GetOccupancy(ctx, date)
+}

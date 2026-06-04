@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 type Handler struct {
@@ -75,6 +76,20 @@ func (h *Handler) UpdateSpace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, nil, "espace mis à jour")
+}
+
+func (h *Handler) GetOccupancy(w http.ResponseWriter, r *http.Request) {
+	date := r.URL.Query().Get("date")
+	if date == "" {
+		date = time.Now().Format("2006-01-02")
+	}
+	items, err := h.svc.GetOccupancy(r.Context(), date)
+	if err != nil {
+		slog.Error("get occupancy", "erreur", err)
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, items, "")
 }
 
 func (h *Handler) DeactivateSpace(w http.ResponseWriter, r *http.Request) {

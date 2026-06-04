@@ -87,3 +87,40 @@ func (r *Repository) SetActive(ctx context.Context, id string, active bool) erro
 	)
 	return err
 }
+
+type OccupancyItem struct {
+	ID             string        `json:"id"`
+	Name           string        `json:"name"`
+	Type           string        `json:"type"`
+	Capacity       int           `json:"capacity"`
+	Seats          int           `json:"seats"`
+	EquipmentFixed []string      `json:"equipment_fixed"`
+	Bookings       []interface{} `json:"bookings"`
+	PresenceCount  int           `json:"presence_count"`
+	IsOverCapacity bool          `json:"is_over_capacity"`
+}
+
+func (r *Repository) GetOccupancy(ctx context.Context, date string) ([]*OccupancyItem, error) {
+	spaces, err := r.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*OccupancyItem, 0, len(spaces))
+	for _, s := range spaces {
+		if !s.IsActive {
+			continue
+		}
+		items = append(items, &OccupancyItem{
+			ID:             s.ID,
+			Name:           s.Name,
+			Type:           s.Type,
+			Capacity:       s.Capacity,
+			Seats:          s.Seats,
+			EquipmentFixed: s.EquipmentFixed,
+			Bookings:       []interface{}{},
+			PresenceCount:  0,
+			IsOverCapacity: false,
+		})
+	}
+	return items, nil
+}

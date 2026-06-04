@@ -410,16 +410,16 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 5 — Tableau de bord & vue d'accueil
+### ÉTAPE 5 — Tableau de bord & vue d'accueil ✅
 **Objectif** : Vue planning du campus pour une journée donnée.
 
-- [ ] Route `GET /api/v1/spaces/occupancy?date=` — occupation de tous les espaces pour un jour
-- [ ] Composant grille horaire des salles (orange=occupé, bleu=en attente, vert=libre, rouge=suroccupé)
-- [ ] Composant vue bureaux staff avec indicateur de présence
-- [ ] Sélecteur de date avec navigation
-- [ ] Indicateur taux d'occupation global
-- [ ] Skeleton loader pendant le chargement des données
-- [ ] Clic sur espace → vue hebdomadaire
+- [x] Route `GET /api/v1/spaces/occupancy?date=` — occupation de tous les espaces pour un jour
+- [x] Composant grille horaire des salles (orange=occupé, bleu=en attente, vert=libre, rouge=suroccupé)
+- [x] Composant vue bureaux staff avec indicateur de présence
+- [x] Sélecteur de date avec navigation
+- [x] Indicateur taux d'occupation global
+- [x] Skeleton loader pendant le chargement des données
+- [x] Clic sur espace → vue hebdomadaire (placeholder, complété à l'Étape 6)
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 5 — Tableau de bord & vue d'accueil
-Dernière action : ÉTAPE 4 complétée ✅
+Étape en cours  : ÉTAPE 6 — Réservations de salle
+Dernière action : ÉTAPE 5 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```

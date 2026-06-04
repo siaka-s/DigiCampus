@@ -71,7 +71,9 @@ func main() {
 	// Lecture espaces — tous les connectés
 	privateMux := http.NewServeMux()
 	privateMux.HandleFunc("GET /api/v1/spaces", spaceHandler.GetSpaces)
+	privateMux.HandleFunc("GET /api/v1/spaces/occupancy", spaceHandler.GetOccupancy)
 	mux.Handle("/api/v1/spaces", middleware.Auth(privateMux))
+	mux.Handle("/api/v1/spaces/occupancy", middleware.Auth(privateMux))
 
 	// Écriture espaces — admin uniquement
 	spaceAdminMux := http.NewServeMux()
