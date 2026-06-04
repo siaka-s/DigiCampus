@@ -14,7 +14,17 @@ var (
 	ErrEmailTaken     = errors.New("cet email est déjà utilisé")
 	ErrInvalidCreds   = errors.New("email ou mot de passe incorrect")
 	ErrAccountPending = errors.New("compte en attente de validation")
+	ErrUserNotFound   = errors.New("utilisateur introuvable")
+	ErrInvalidRole    = errors.New("rôle invalide")
 )
+
+var validRoles = map[string]bool{
+	"super_admin":              true,
+	"admin":                    true,
+	"admin_it":                 true,
+	"collaborateur_digifemmes": true,
+	"collaborateur_partenaire": true,
+}
 
 type Service struct {
 	repo *Repository
@@ -77,4 +87,27 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (string, error) {
 	})
 
 	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+}
+
+func (s *Service) ListUsers(ctx context.Context) ([]*User, error) {
+	return s.repo.FindAll(ctx)
+}
+
+func (s *Service) ActivateUser(ctx context.Context, id string) error {
+	return s.repo.SetActive(ctx, id, true)
+}
+
+func (s *Service) DeactivateUser(ctx context.Context, id string) error {
+	return s.repo.SetActive(ctx, id, false)
+}
+
+func (s *Service) ChangeRole(ctx context.Context, id, role string) error {
+	if !validRoles[role] {
+		return ErrInvalidRole
+	}
+	return s.repo.UpdateRole(ctx, id, role)
+}
+
+func (s *Service) ChangeDepartment(ctx context.Context, id string, department *string) error {
+	return s.repo.UpdateDepartment(ctx, id, department)
 }

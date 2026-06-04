@@ -62,6 +62,70 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, nil, "compte créé, en attente de validation")
 }
 
+func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.svc.ListUsers(r.Context())
+	if err != nil {
+		slog.Error("list users", "erreur", err)
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, users, "")
+}
+
+func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := h.svc.ActivateUser(r.Context(), id); err != nil {
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, nil, "compte activé")
+}
+
+func (h *Handler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := h.svc.DeactivateUser(r.Context(), id); err != nil {
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, nil, "compte désactivé")
+}
+
+func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var body struct {
+		Role string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, nil, "corps invalide")
+		return
+	}
+	if err := h.svc.ChangeRole(r.Context(), id, body.Role); err != nil {
+		if errors.Is(err, ErrInvalidRole) {
+			writeJSON(w, http.StatusBadRequest, nil, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, nil, "rôle mis à jour")
+}
+
+func (h *Handler) UpdateDepartment(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var body struct {
+		Department *string `json:"department"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, nil, "corps invalide")
+		return
+	}
+	if err := h.svc.ChangeDepartment(r.Context(), id, body.Department); err != nil {
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, nil, "département mis à jour")
+}
+
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var input LoginInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {

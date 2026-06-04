@@ -52,9 +52,16 @@ func main() {
 
 	mux.Handle("/api/v1/auth/", middleware.RateLimit(publicMux))
 
-	// Routes privées (JWT requis)
-	privateMux := http.NewServeMux()
-	mux.Handle("/api/v1/", middleware.Auth(privateMux))
+	// Routes privées admin (JWT + rôle super_admin)
+	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("GET /api/v1/users", userHandler.GetUsers)
+	adminMux.HandleFunc("PATCH /api/v1/users/{id}/activate", userHandler.ActivateUser)
+	adminMux.HandleFunc("PATCH /api/v1/users/{id}/role", userHandler.UpdateRole)
+	adminMux.HandleFunc("PATCH /api/v1/users/{id}/department", userHandler.UpdateDepartment)
+	adminMux.HandleFunc("DELETE /api/v1/users/{id}", userHandler.DeactivateUser)
+
+	mux.Handle("/api/v1/users", middleware.Auth(middleware.RequireRole("super_admin")(adminMux)))
+	mux.Handle("/api/v1/users/", middleware.Auth(middleware.RequireRole("super_admin")(adminMux)))
 
 	handler := middleware.Security(middleware.CORS(mux))
 

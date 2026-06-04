@@ -384,16 +384,16 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 
 ---
 
-### ÉTAPE 3 — Gestion des comptes (Super Admin)
+### ÉTAPE 3 — Gestion des comptes (Super Admin) ✅
 **Objectif** : Interface super admin pour gérer les utilisateurs.
 
-- [ ] Route `GET /api/v1/users` — liste des utilisateurs
-- [ ] Route `PATCH /api/v1/users/:id/activate` — activer un compte
-- [ ] Route `PATCH /api/v1/users/:id/role` — changer le rôle
-- [ ] Route `PATCH /api/v1/users/:id/department` — attribuer un badge département
-- [ ] Route `DELETE /api/v1/users/:id` — désactiver un compte
-- [ ] Page super admin : liste des utilisateurs avec filtres
-- [ ] Page super admin : formulaire d'édition d'un utilisateur
+- [x] Route `GET /api/v1/users` — liste des utilisateurs
+- [x] Route `PATCH /api/v1/users/:id/activate` — activer un compte
+- [x] Route `PATCH /api/v1/users/:id/role` — changer le rôle
+- [x] Route `PATCH /api/v1/users/:id/department` — attribuer un badge département
+- [x] Route `DELETE /api/v1/users/:id` — désactiver un compte
+- [x] Page super admin : liste des utilisateurs avec filtres
+- [x] Page super admin : formulaire d'édition d'un utilisateur (dialog inline)
 
 ---
 
@@ -526,7 +526,7 @@ Claude coche ✅ uniquement après confirmation explicite du développeur.
 ## ÉTAT ACTUEL DU PROJET
 
 ```
-Étape en cours  : ÉTAPE 3 — Gestion des comptes (Super Admin)
-Dernière action : ÉTAPE 2 complétée ✅
+Étape en cours  : ÉTAPE 4 — Référentiel des espaces
+Dernière action : ÉTAPE 3 complétée ✅
 Prochaine action : Attente des instructions du développeur
 ```
