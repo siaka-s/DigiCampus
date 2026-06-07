@@ -240,14 +240,14 @@ export default function SpacesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="capacity" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Capacité (participants)</FormLabel>
+                    <FormLabel>Capacité maximale</FormLabel>
                     <FormControl><Input type="number" min={0} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="seats" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Places assises</FormLabel>
+                    <FormLabel>Places assises (bureaux)</FormLabel>
                     <FormControl><Input type="number" min={0} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>

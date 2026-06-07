@@ -1,20 +1,31 @@
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+import { AuthSlideshow } from "@/components/auth-slideshow"
+
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-digicampus-neutral flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-digicampus-text-primary">
-            DigiCampus
-          </h1>
-          <p className="text-digicampus-text-secondary text-sm mt-1">
-            DigiFemmes Côte d&apos;Ivoire
-          </p>
+    <div className="min-h-screen flex">
+      {/* Left — Form */}
+      <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-16 bg-white">
+        <div className="mx-auto w-full max-w-sm py-8 lg:py-12">
+          {/* Logo */}
+          <div className="mb-10 text-center">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-digicampus-primary flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-sm tracking-tight">DC</span>
+              </div>
+              <span className="text-2xl font-bold tracking-tight text-digicampus-text-primary">DigiCampus</span>
+            </div>
+            <p className="text-sm text-digicampus-text-secondary tracking-wide">
+              DigiFemmes Côte d&apos;Ivoire
+            </p>
+          </div>
+
+          {children}
         </div>
-        {children}
+      </div>
+
+      {/* Right — Slideshow (visible à partir de lg) */}
+      <div className="hidden lg:block lg:w-[55%] xl:w-[58%] relative">
+        <AuthSlideshow />
       </div>
     </div>
   )

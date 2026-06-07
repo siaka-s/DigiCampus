@@ -6,18 +6,19 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Loader2 } from "lucide-react"
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+} from "@/components/ui/form"
+import { Loader2, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react"
 
 const schema = z.object({
-  email: z.string().email("Email invalide"),
-  password: z.string().min(8, "8 caractères minimum"),
+  email:           z.string().email("Email invalide"),
+  password:        z.string().min(8, "8 caractères minimum"),
   confirmPassword: z.string(),
-  website: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
+  website:         z.string(),
+}).refine(d => d.password === d.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
 })
@@ -25,9 +26,11 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const router    = useRouter()
+  const [error, setError]             = useState<string | null>(null)
+  const [success, setSuccess]         = useState(false)
+  const [showPwd, setShowPwd]         = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const loadedAt = useRef(new Date().toISOString())
 
   const form = useForm<FormValues>({
@@ -47,123 +50,169 @@ export default function RegisterPage() {
           "X-Submitted-At": loadedAt.current,
         },
         body: JSON.stringify({
-          email: values.email,
+          email:   values.email,
           password: values.password,
-          website: values.website,
+          website:  values.website,
         }),
       }
     )
 
-    if (res.status === 409) {
-      setError("Cet email est déjà utilisé")
-      return
-    }
-
-    if (!res.ok) {
-      setError("Une erreur est survenue, réessayez")
-      return
-    }
+    if (res.status === 409) { setError("Cet email est déjà utilisé"); return }
+    if (!res.ok)            { setError("Une erreur est survenue, réessayez"); return }
 
     setSuccess(true)
-    setTimeout(() => router.push("/pending"), 2000)
+    setTimeout(() => router.push("/pending"), 2500)
   }
 
   if (success) {
     return (
-      <Card>
-        <CardContent className="pt-6 text-center space-y-2">
-          <p className="text-digicampus-success font-medium">Compte créé avec succès</p>
-          <p className="text-sm text-digicampus-text-secondary">
-            Votre compte est en attente de validation par un administrateur.
+      <div className="space-y-4 text-center py-4">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-digicampus-success" />
+          </div>
+        </div>
+        <div>
+          <p className="font-semibold text-digicampus-text-primary">Compte créé avec succès</p>
+          <p className="text-sm text-digicampus-text-secondary mt-1">
+            Un administrateur va activer votre accès prochainement.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+        <p className="text-xs text-digicampus-text-secondary">Redirection en cours…</p>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Créer un compte</CardTitle>
-        <CardDescription>Rejoignez l&apos;espace DigiCampus</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Honeypot — caché visuellement */}
-            <input
-              type="text"
-              {...form.register("website")}
-              className="hidden"
-              tabIndex={-1}
-              autoComplete="off"
-            />
+    <div className="space-y-7">
+      <div className="text-center space-y-1.5">
+        <h2 className="text-3xl font-extrabold text-digicampus-text-primary tracking-tight leading-tight">
+          Créer un compte
+        </h2>
+        <p className="text-base text-digicampus-text-secondary leading-relaxed">
+          Rejoignez l&apos;espace DigiCampus DigiFemmes
+        </p>
+      </div>
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="vous@digifemmes.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="8 caractères minimum" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmer le mot de passe</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Honeypot — caché visuellement */}
+          <input
+            type="text"
+            {...form.register("website")}
+            className="hidden"
+            tabIndex={-1}
+            autoComplete="off"
+          />
 
-            {error && (
-              <p className="text-sm text-digicampus-danger">{error}</p>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-digicampus-text-primary">
+                  Adresse email
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="vous@digifemmes.com"
+                    className="h-11"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
+          />
 
-            <Button
-              type="submit"
-              className="w-full bg-digicampus-primary hover:bg-digicampus-primary-dark text-white"
-              disabled={form.formState.isSubmitting}
-            >
-              {form.formState.isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Créer mon compte"
-              )}
-            </Button>
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-digicampus-text-primary">
+                  Mot de passe
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPwd ? "text" : "password"}
+                      placeholder="8 caractères minimum"
+                      className="h-11 pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwd(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-digicampus-text-secondary hover:text-digicampus-text-primary transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <p className="text-center text-sm text-digicampus-text-secondary">
-              Déjà un compte ?{" "}
-              <Link href="/login" className="text-digicampus-primary hover:underline">
-                Se connecter
-              </Link>
-            </p>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-digicampus-text-primary">
+                  Confirmer le mot de passe
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="h-11 pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-digicampus-text-secondary hover:text-digicampus-text-primary transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-digicampus-danger shrink-0" />
+              <p className="text-sm text-digicampus-danger">{error}</p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-11 bg-digicampus-primary hover:bg-digicampus-primary-dark text-white font-medium"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : "Créer mon compte"}
+          </Button>
+        </form>
+      </Form>
+
+      <p className="text-center text-sm text-digicampus-text-secondary">
+        Déjà un compte ?{" "}
+        <Link href="/login" className="text-digicampus-primary hover:underline font-medium">
+          Se connecter
+        </Link>
+      </p>
+    </div>
   )
 }

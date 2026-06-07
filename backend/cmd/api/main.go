@@ -9,6 +9,7 @@ import (
 
 	"github.com/digifemmes/digicampus/internal/booking"
 	"github.com/digifemmes/digicampus/internal/equipment"
+	"github.com/digifemmes/digicampus/internal/photo"
 	"github.com/digifemmes/digicampus/internal/presence"
 	"github.com/digifemmes/digicampus/internal/space"
 	"github.com/digifemmes/digicampus/internal/user"
@@ -25,8 +26,17 @@ var requiredEnvVars = []string{
 }
 
 func main() {
+	// Logs lisibles en développement
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})))
+
+	slog.Info("DigiCampus — démarrage du serveur")
+
 	if err := godotenv.Load(); err != nil {
 		slog.Warn("pas de fichier .env trouvé, utilisation des variables système")
+	} else {
+		slog.Info("configuration chargée", "fichier", ".env")
 	}
 
 	for _, v := range requiredEnvVars {
@@ -35,6 +45,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	slog.Info("variables d'environnement OK")
 
 	pool, err := database.NewPool(os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -42,6 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+	slog.Info("base de données connectée")
 
 	userRepo := user.NewRepository(pool)
 	userSvc := user.NewService(userRepo)
@@ -75,8 +87,10 @@ func main() {
 	privateMux := http.NewServeMux()
 	privateMux.HandleFunc("GET /api/v1/spaces", spaceHandler.GetSpaces)
 	privateMux.HandleFunc("GET /api/v1/spaces/occupancy", spaceHandler.GetOccupancy)
+	privateMux.HandleFunc("GET /api/v1/spaces/occupancy/week", spaceHandler.GetOccupancyWeek)
 	mux.Handle("/api/v1/spaces", middleware.Auth(privateMux))
 	mux.Handle("/api/v1/spaces/occupancy", middleware.Auth(privateMux))
+	mux.Handle("/api/v1/spaces/occupancy/week", middleware.Auth(privateMux))
 
 	// Écriture espaces — admin uniquement
 	spaceAdminMux := http.NewServeMux()
@@ -153,10 +167,31 @@ func main() {
 	mux.Handle("/api/v1/equipment/overdue", middleware.Auth(middleware.RequireRole("admin", "super_admin", "admin_it")(eqAdminMux)))
 	mux.Handle("/api/v1/equipment/", middleware.Auth(middleware.RequireRole("admin", "super_admin", "admin_it")(eqAdminMux)))
 
+	// Photos campus — GET public, mutations admin
+	photoRepo    := photo.NewRepository(pool)
+	photoSvc     := photo.NewService(photoRepo, "./uploads")
+	photoHandler := photo.NewHandler(photoSvc)
+
+	mux.HandleFunc("GET /api/v1/photos", photoHandler.List)
+	mux.Handle("POST /api/v1/photos", middleware.Auth(middleware.RequireRole("admin", "super_admin")(http.HandlerFunc(photoHandler.Upload))))
+
+	photoMutMux := http.NewServeMux()
+	photoMutMux.HandleFunc("PATCH /api/v1/photos/{id}", photoHandler.Update)
+	photoMutMux.HandleFunc("DELETE /api/v1/photos/{id}", photoHandler.Delete)
+	mux.Handle("/api/v1/photos/", middleware.Auth(middleware.RequireRole("admin", "super_admin")(photoMutMux)))
+
+	// Fichiers statiques uploads
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
+	slog.Info("routes enregistrées", "modules", "auth · users · spaces · bookings · presence · equipment · photos")
+
 	handler := middleware.Security(middleware.CORS(mux))
 
 	addr := ":" + os.Getenv("PORT")
-	slog.Info("serveur démarré", "adresse", addr)
+	slog.Info("─────────────────────────────────────────")
+	slog.Info("serveur prêt", "port", os.Getenv("PORT"), "url", "http://localhost"+addr)
+	slog.Info("─────────────────────────────────────────")
+
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		slog.Error("erreur serveur", "erreur", err)
 		os.Exit(1)
