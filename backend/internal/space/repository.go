@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -89,16 +90,24 @@ func (r *Repository) SetActive(ctx context.Context, id string, active bool) erro
 	return err
 }
 
+type OccupancyBooking struct {
+	ID        string    `json:"id"`
+	Program   string    `json:"program"`
+	StartTime time.Time `json:"start_time"`
+	Duration  int       `json:"duration"`
+	Status    string    `json:"status"`
+}
+
 type OccupancyItem struct {
-	ID             string        `json:"id"`
-	Name           string        `json:"name"`
-	Type           string        `json:"type"`
-	Capacity       int           `json:"capacity"`
-	Seats          int           `json:"seats"`
-	EquipmentFixed []string      `json:"equipment_fixed"`
-	Bookings       []interface{} `json:"bookings"`
-	PresenceCount  int           `json:"presence_count"`
-	IsOverCapacity bool          `json:"is_over_capacity"`
+	ID             string              `json:"id"`
+	Name           string              `json:"name"`
+	Type           string              `json:"type"`
+	Capacity       int                 `json:"capacity"`
+	Seats          int                 `json:"seats"`
+	EquipmentFixed []string            `json:"equipment_fixed"`
+	Bookings       []OccupancyBooking  `json:"bookings"`
+	PresenceCount  int                 `json:"presence_count"`
+	IsOverCapacity bool                `json:"is_over_capacity"`
 }
 
 func (r *Repository) FindAvailable(ctx context.Context, startTime time.Time, duration, participants int) ([]*Space, error) {
@@ -164,16 +173,63 @@ func (r *Repository) HasConflict(ctx context.Context, spaceID string, startTime 
 	return count > 0, err
 }
 
+func (r *Repository) GetOccupancyWeek(ctx context.Context, monday string) ([][]*OccupancyItem, error) {
+	t, err := time.Parse("2006-01-02", monday)
+	if err != nil {
+		return nil, fmt.Errorf("date invalide: %w", err)
+	}
+	result := make([][]*OccupancyItem, 7)
+	for i := 0; i < 7; i++ {
+		date := t.AddDate(0, 0, i).Format("2006-01-02")
+		items, err := r.GetOccupancy(ctx, date)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = items
+	}
+	return result, nil
+}
+
 func (r *Repository) GetOccupancy(ctx context.Context, date string) ([]*OccupancyItem, error) {
 	spaces, err := r.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	items := make([]*OccupancyItem, 0, len(spaces))
 	for _, s := range spaces {
 		if !s.IsActive {
 			continue
 		}
+
+		bookings := []OccupancyBooking{}
+		rows, err := r.db.Query(ctx,
+			`SELECT id, program, start_time, duration, status
+			 FROM bookings
+			 WHERE space_id=$1
+			   AND status IN ('en_attente','validee')
+			   AND DATE(start_time AT TIME ZONE 'UTC') = $2::date
+			 ORDER BY start_time ASC`,
+			s.ID, date,
+		)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var b OccupancyBooking
+				if rows.Scan(&b.ID, &b.Program, &b.StartTime, &b.Duration, &b.Status) == nil {
+					bookings = append(bookings, b)
+				}
+			}
+		}
+
+		var presenceCount int
+		if s.Type == "bureau_partage" {
+			r.db.QueryRow(ctx,
+				`SELECT COUNT(*) FROM presence WHERE space_id=$1 AND date=$2::date`,
+				s.ID, date,
+			).Scan(&presenceCount)
+		}
+
 		items = append(items, &OccupancyItem{
 			ID:             s.ID,
 			Name:           s.Name,
@@ -181,9 +237,9 @@ func (r *Repository) GetOccupancy(ctx context.Context, date string) ([]*Occupanc
 			Capacity:       s.Capacity,
 			Seats:          s.Seats,
 			EquipmentFixed: s.EquipmentFixed,
-			Bookings:       []interface{}{},
-			PresenceCount:  0,
-			IsOverCapacity: false,
+			Bookings:       bookings,
+			PresenceCount:  presenceCount,
+			IsOverCapacity: s.Type == "bureau_partage" && s.Seats > 0 && presenceCount > s.Seats,
 		})
 	}
 	return items, nil

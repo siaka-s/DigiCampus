@@ -93,6 +93,25 @@ func (h *Handler) GetOccupancy(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, items, "")
 }
 
+func (h *Handler) GetOccupancyWeek(w http.ResponseWriter, r *http.Request) {
+	monday := r.URL.Query().Get("monday")
+	if monday == "" {
+		now := time.Now()
+		wd := int(now.Weekday())
+		if wd == 0 {
+			wd = 7
+		}
+		monday = now.AddDate(0, 0, 1-wd).Format("2006-01-02")
+	}
+	items, err := h.svc.GetOccupancyWeek(r.Context(), monday)
+	if err != nil {
+		slog.Error("get occupancy week", "erreur", err)
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, items, "")
+}
+
 func (h *Handler) GetAvailable(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	startTime, _ := time.Parse(time.RFC3339, q.Get("start_time"))

@@ -8,11 +8,24 @@ type ApiResponse<T> = {
   message: string
 }
 
+// Cache la session 60s — évite un getSession() par requête API
+let _session: Awaited<ReturnType<typeof getSession>> | undefined
+let _sessionExpiry = 0
+
+async function getCachedSession() {
+  if (_session !== undefined && Date.now() < _sessionExpiry) {
+    return _session
+  }
+  _session = await getSession()
+  _sessionExpiry = Date.now() + 60_000
+  return _session
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const session = await getSession()
+  const session = await getCachedSession()
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -25,6 +38,7 @@ async function request<T>(
   const res = await fetch(`${API_URL}${path}`, { ...options, headers })
 
   if (res.status === 401) {
+    _session = undefined // Invalide le cache sur 401
     window.location.href = "/login"
     return { data: null, error: "Non authentifié", message: "" }
   }
