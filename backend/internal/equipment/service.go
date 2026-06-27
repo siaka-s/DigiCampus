@@ -11,9 +11,22 @@ var (
 	ErrNotPending = errors.New("seules les demandes en attente peuvent être modifiées")
 )
 
-type Service struct{ repo *Repository }
+type AdminRepository interface {
+	FindAdminITEmails(ctx context.Context) ([]string, error)
+}
 
-func NewService(repo *Repository) *Service { return &Service{repo: repo} }
+type Service struct {
+	repo      *Repository
+	adminRepo AdminRepository
+}
+
+func NewService(repo *Repository, adminRepo AdminRepository) *Service {
+	return &Service{repo: repo, adminRepo: adminRepo}
+}
+
+func (s *Service) GetAdminITEmails(ctx context.Context) ([]string, error) {
+	return s.adminRepo.FindAdminITEmails(ctx)
+}
 
 type CreateEquipmentInput struct {
 	Type string `json:"type" validate:"required"`
@@ -83,32 +96,32 @@ func (s *Service) ListRequests(ctx context.Context, userID, role string) ([]*Req
 	return s.repo.FindRequests(ctx, userID, role)
 }
 
-func (s *Service) Validate(ctx context.Context, id string) error {
+func (s *Service) Validate(ctx context.Context, id string) (*Request, error) {
 	req, err := s.repo.FindRequestByID(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if req == nil {
-		return ErrNotFound
+		return nil, ErrNotFound
 	}
 	if req.Status != "en_attente" {
-		return ErrNotPending
+		return nil, ErrNotPending
 	}
-	return s.repo.UpdateRequestStatus(ctx, id, "validee", nil)
+	return req, s.repo.UpdateRequestStatus(ctx, id, "validee", nil)
 }
 
-func (s *Service) Refuse(ctx context.Context, id, comment string) error {
+func (s *Service) Refuse(ctx context.Context, id, comment string) (*Request, error) {
 	req, err := s.repo.FindRequestByID(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if req == nil {
-		return ErrNotFound
+		return nil, ErrNotFound
 	}
 	if req.Status != "en_attente" {
-		return ErrNotPending
+		return nil, ErrNotPending
 	}
-	return s.repo.UpdateRequestStatus(ctx, id, "refusee", &comment)
+	return req, s.repo.UpdateRequestStatus(ctx, id, "refusee", &comment)
 }
 
 func (s *Service) CloseRental(ctx context.Context, id string) error {

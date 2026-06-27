@@ -99,13 +99,19 @@ export default function PhotosPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-digicampus-text-primary">
-        Photos du campus
-      </h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-digicampus-text-primary">
+          Photos du campus
+        </h1>
+        <p className="text-sm text-digicampus-text-secondary mt-1">
+          Gérez les photos affichées dans le diaporama de la page de connexion
+        </p>
+      </div>
 
       {/* Zone d'upload */}
-      <div className="bg-white rounded-xl border border-border p-6 space-y-4">
+      <div className="rounded-xl border border-border bg-white shadow-sm p-6 space-y-4">
         <h2 className="text-sm font-semibold text-digicampus-text-primary">
           Ajouter une photo
         </h2>
@@ -115,15 +121,17 @@ export default function PhotosPage() {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="relative w-40 h-28 rounded-lg border-2 border-dashed border-border hover:border-digicampus-primary/50 transition-colors overflow-hidden shrink-0 bg-digicampus-neutral flex items-center justify-center"
+            className="relative w-44 h-32 rounded-xl border-2 border-dashed border-border hover:border-digicampus-primary/50 transition-colors overflow-hidden shrink-0 bg-digicampus-neutral flex items-center justify-center group"
           >
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="aperçu" className="w-full h-full object-cover" />
             ) : (
-              <div className="flex flex-col items-center gap-1.5 text-digicampus-text-secondary">
-                <ImageIcon className="w-6 h-6" />
-                <span className="text-xs">Choisir</span>
+              <div className="flex flex-col items-center gap-2 text-digicampus-text-secondary group-hover:text-digicampus-primary transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center shadow-sm">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-medium">Choisir une image</span>
               </div>
             )}
           </button>
@@ -166,8 +174,10 @@ export default function PhotosPage() {
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
         </div>
       ) : photos.length === 0 ? (
-        <div className="bg-white rounded-xl border border-border p-12 text-center space-y-2">
-          <ImageIcon className="w-10 h-10 text-digicampus-text-secondary mx-auto" />
+        <div className="rounded-xl border border-border bg-white shadow-sm p-12 text-center space-y-2">
+          <div className="w-14 h-14 rounded-xl bg-digicampus-neutral flex items-center justify-center mx-auto mb-3">
+            <ImageIcon className="w-7 h-7 text-digicampus-text-secondary" />
+          </div>
           <p className="text-sm font-medium text-digicampus-text-primary">Aucune photo</p>
           <p className="text-xs text-digicampus-text-secondary">
             Ajoutez une première photo pour qu&apos;elle apparaisse sur la page de connexion
@@ -178,7 +188,7 @@ export default function PhotosPage() {
           {photos.map(photo => (
             <div
               key={photo.id}
-              className={`bg-white rounded-xl border overflow-hidden transition-all ${
+              className={`rounded-xl border bg-white shadow-sm overflow-hidden transition-all ${
                 photo.is_active ? "border-border" : "border-border opacity-60"
               }`}
             >
@@ -190,12 +200,12 @@ export default function PhotosPage() {
                   alt={photo.caption}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2.5 right-2.5">
                   <Badge
                     className={
                       photo.is_active
-                        ? "bg-digicampus-success/90 text-white text-xs"
-                        : "bg-gray-500/80 text-white text-xs"
+                        ? "bg-digicampus-success/90 text-white text-xs shadow-sm"
+                        : "bg-gray-500/80 text-white text-xs shadow-sm"
                     }
                   >
                     {photo.is_active ? "Visible" : "Masquée"}
@@ -216,7 +226,7 @@ export default function PhotosPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="shrink-0 h-9 w-9 p-0"
+                    className="shrink-0 h-9 w-9 p-0 rounded-xl"
                     onClick={() => saveCaption(photo)}
                     title="Enregistrer la légende"
                   >
@@ -229,7 +239,7 @@ export default function PhotosPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 gap-1.5 text-xs"
+                    className="flex-1 gap-1.5 text-xs rounded-xl"
                     onClick={() => toggleActive(photo)}
                   >
                     {photo.is_active
@@ -239,7 +249,7 @@ export default function PhotosPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 gap-1.5 text-xs text-digicampus-danger hover:bg-red-50 hover:border-red-200"
+                    className="flex-1 gap-1.5 text-xs rounded-xl text-digicampus-danger hover:bg-red-50 hover:border-red-200"
                     onClick={() => setDeleteTarget(photo)}
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Supprimer
@@ -253,7 +263,7 @@ export default function PhotosPage() {
 
       {/* Dialog confirmation suppression */}
       <Dialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-xl">
           <DialogHeader>
             <DialogTitle>Supprimer la photo ?</DialogTitle>
           </DialogHeader>

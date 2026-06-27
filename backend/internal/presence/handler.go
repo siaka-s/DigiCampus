@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/digifemmes/digicampus/pkg/mailer"
 	"github.com/digifemmes/digicampus/pkg/middleware"
 )
 
@@ -38,6 +39,27 @@ func (h *Handler) Declare(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
+
+	// Alerte suroccupation pour chaque jour nouvellement déclaré
+	for _, dateStr := range input.Dates {
+		d := dateStr
+		go func() {
+			ctx := r.Context()
+			over, count, seats, err := h.svc.IsOverCapacity(ctx, input.SpaceID, d)
+			if err != nil || !over {
+				return
+			}
+			spaceName, _ := h.svc.GetSpaceName(ctx, input.SpaceID)
+			adminEmails, _ := h.svc.GetAdminEmails(ctx)
+			for _, email := range adminEmails {
+				subj, html := mailer.AlerteSuroccupation(email, spaceName, count, seats)
+				if err := mailer.Send(email, subj, html); err != nil {
+					slog.Warn("email alerte suroccupation", "erreur", err)
+				}
+			}
+		}()
+	}
+
 	writeJSON(w, http.StatusCreated, items, "")
 }
 
@@ -89,7 +111,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "déclaration mise à jour")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) CheckOverCapacity(w http.ResponseWriter, r *http.Request) {

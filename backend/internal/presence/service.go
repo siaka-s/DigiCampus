@@ -13,23 +13,42 @@ var (
 
 type SpaceRepository interface {
 	GetSeats(ctx context.Context, spaceID string) (int, error)
+	GetName(ctx context.Context, spaceID string) (string, error)
+}
+
+type AdminRepository interface {
+	FindAdminEmails(ctx context.Context) ([]string, error)
 }
 
 type Service struct {
 	repo      *Repository
 	spaceRepo SpaceRepository
+	adminRepo AdminRepository
 }
 
-func NewService(repo *Repository, spaceRepo SpaceRepository) *Service {
-	return &Service{repo: repo, spaceRepo: spaceRepo}
+func NewService(repo *Repository, spaceRepo SpaceRepository, adminRepo AdminRepository) *Service {
+	return &Service{repo: repo, spaceRepo: spaceRepo, adminRepo: adminRepo}
+}
+
+func (s *Service) GetAdminEmails(ctx context.Context) ([]string, error) {
+	return s.adminRepo.FindAdminEmails(ctx)
+}
+
+func (s *Service) GetSpaceName(ctx context.Context, spaceID string) (string, error) {
+	return s.spaceRepo.GetName(ctx, spaceID)
 }
 
 type DeclareInput struct {
 	SpaceID string   `json:"space_id" validate:"required"`
-	Dates   []string `json:"dates"    validate:"required"`
+	Week    string   `json:"week"     validate:"required"` // YYYY-MM-DD lundi de la semaine
+	Dates   []string `json:"dates"`
 }
 
+// Declare remplace atomiquement la présence de l'utilisateur pour (bureau + semaine).
 func (s *Service) Declare(ctx context.Context, input DeclareInput, userID string) ([]*Presence, error) {
+	if err := s.repo.DeleteByUserSpaceWeek(ctx, userID, input.SpaceID, input.Week); err != nil {
+		return nil, err
+	}
 	var created []*Presence
 	for _, dateStr := range input.Dates {
 		date, err := time.Parse("2006-01-02", dateStr)

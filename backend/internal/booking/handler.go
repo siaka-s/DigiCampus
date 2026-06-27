@@ -1,20 +1,26 @@
 package booking
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
+	"github.com/digifemmes/digicampus/internal/notification"
+	"github.com/digifemmes/digicampus/pkg/mailer"
 	"github.com/digifemmes/digicampus/pkg/middleware"
 )
 
 type Handler struct {
-	svc *Service
+	svc      *Service
+	notifSvc *notification.Service
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc *Service, notifSvc *notification.Service) *Handler {
+	return &Handler{svc: svc, notifSvc: notifSvc}
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any, errMsg string) {
@@ -90,7 +96,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Validate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if err := h.svc.Validate(r.Context(), id); err != nil {
+	b, err := h.svc.Validate(r.Context(), id)
+	if err != nil {
 		switch {
 		case errors.Is(err, ErrBookingNotFound):
 			writeJSON(w, http.StatusNotFound, nil, err.Error())
@@ -102,7 +109,19 @@ func (h *Handler) Validate(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "réservation validée")
+	go func() {
+		refID := b.ID
+		h.notifSvc.Create(context.Background(), b.UserID, "booking_validated",
+			fmt.Sprintf("Votre réservation \"%s\" a été validée.", b.Program), &refID)
+		prenom := strings.Split(b.UserEmail, "@")[0]
+		date := b.StartTime.Format("02/01/2006")
+		horaire := fmt.Sprintf("%02dh%02d", b.StartTime.Hour(), b.StartTime.Minute())
+		subj, html := mailer.ReservationValidee(prenom, b.Program, b.SpaceName, date, horaire)
+		if err := mailer.Send(b.UserEmail, subj, html); err != nil {
+			slog.Warn("email réservation validée", "erreur", err)
+		}
+	}()
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) Refuse(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +133,8 @@ func (h *Handler) Refuse(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, nil, "corps invalide")
 		return
 	}
-	if err := h.svc.Refuse(r.Context(), id, body.Comment); err != nil {
+	b, err := h.svc.Refuse(r.Context(), id, body.Comment)
+	if err != nil {
 		switch {
 		case errors.Is(err, ErrBookingNotFound):
 			writeJSON(w, http.StatusNotFound, nil, err.Error())
@@ -126,7 +146,20 @@ func (h *Handler) Refuse(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "réservation refusée")
+	go func() {
+		refID := b.ID
+		msg := fmt.Sprintf("Votre réservation \"%s\" a été refusée.", b.Program)
+		if body.Comment != "" {
+			msg += " Motif : " + body.Comment
+		}
+		h.notifSvc.Create(context.Background(), b.UserID, "booking_refused", msg, &refID)
+		prenom := strings.Split(b.UserEmail, "@")[0]
+		subj, html := mailer.ReservationRefusee(prenom, b.Program, body.Comment)
+		if err := mailer.Send(b.UserEmail, subj, html); err != nil {
+			slog.Warn("email réservation refusée", "erreur", err)
+		}
+	}()
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) CreateDirect(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +182,18 @@ func (h *Handler) CreateDirect(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	go func() {
+		if b == nil || b.UserEmail == "" {
+			return
+		}
+		prenom := strings.Split(b.UserEmail, "@")[0]
+		date := b.StartTime.Format("02/01/2006")
+		horaire := fmt.Sprintf("%02dh%02d", b.StartTime.UTC().Hour(), b.StartTime.UTC().Minute())
+		subj, html := mailer.RappelCreneau(prenom, b.Program, b.SpaceName, date, horaire)
+		if err := mailer.Send(b.UserEmail, subj, html); err != nil {
+			slog.Warn("email rappel créneau direct", "erreur", err)
+		}
+	}()
 	writeJSON(w, http.StatusCreated, b, "")
 }
 
@@ -186,5 +231,5 @@ func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "réservation annulée")
+	writeJSON(w, http.StatusOK, nil, "")
 }

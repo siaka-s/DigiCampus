@@ -1,19 +1,25 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/digifemmes/digicampus/internal/notification"
+	"github.com/digifemmes/digicampus/pkg/mailer"
 )
 
 type Handler struct {
-	svc *Service
+	svc      *Service
+	notifSvc *notification.Service
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc *Service, notifSvc *notification.Service) *Handler {
+	return &Handler{svc: svc, notifSvc: notifSvc}
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any, errMsg string) {
@@ -74,11 +80,21 @@ func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ActivateUser(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if err := h.svc.ActivateUser(r.Context(), id); err != nil {
+	email, err := h.svc.ActivateUser(r.Context(), id)
+	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "compte activé")
+	go func() {
+		h.notifSvc.Create(context.Background(), id, "account_activated",
+			"Votre compte DigiSpace a été activé. Vous pouvez maintenant vous connecter.", nil)
+		prenom := strings.Split(email, "@")[0]
+		subj, html := mailer.CompteActive(prenom, email)
+		if err := mailer.Send(email, subj, html); err != nil {
+			slog.Warn("email compte activé", "erreur", err)
+		}
+	}()
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +103,7 @@ func (h *Handler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "compte désactivé")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +123,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "rôle mis à jour")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) UpdateDepartment(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +139,7 @@ func (h *Handler) UpdateDepartment(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "département mis à jour")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {

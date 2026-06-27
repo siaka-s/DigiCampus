@@ -13,7 +13,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
-import { Loader2, AlertTriangle } from "lucide-react"
+import { Loader2, AlertTriangle, Clock, CheckCircle, Search } from "lucide-react"
+import { toast } from "sonner"
+import { StatCard } from "@/components/stat-card"
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   en_attente: { label: "En attente",  className: "bg-digicampus-warning/10 text-digicampus-warning" },
@@ -35,6 +37,7 @@ export default function AdminEquipmentRequestsPage() {
   const [comment, setComment]     = useState("")
   const [saving, setSaving]       = useState(false)
   const [filter, setFilter]       = useState("en_attente")
+  const [search, setSearch]       = useState("")
 
   async function load() {
     setLoading(true)
@@ -50,66 +53,108 @@ export default function AdminEquipmentRequestsPage() {
   useEffect(() => { load() }, [])
 
   async function validate(id: string) {
-    await equipmentApi.validate(id)
+    const res = await equipmentApi.validate(id)
+    if (res.error) { toast.error(res.error); return }
+    toast.success("Demande IT validée")
     load()
   }
 
   async function submitRefuse() {
     if (!refusing) return
     setSaving(true)
-    await equipmentApi.refuse(refusing.ID, comment)
+    const res = await equipmentApi.refuse(refusing.ID, comment)
     setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success("Demande IT refusée")
     setRefusing(null)
     setComment("")
     load()
   }
 
   async function closeRental(id: string) {
-    await equipmentApi.closeRental(id)
+    const res = await equipmentApi.closeRental(id)
+    if (res.error) { toast.error(res.error); return }
+    toast.success("Location clôturée")
     load()
   }
 
-  const filtered = filter === "all" ? requests : requests.filter(r => r.Status === filter)
-  const pending = requests.filter(r => r.Status === "en_attente").length
+  const filtered = (filter === "all" ? requests : requests.filter(r => r.Status === filter))
+    .filter(r => {
+      if (!search) return true
+      const q = search.toLowerCase()
+      return (r.Mission ?? "").toLowerCase().includes(q) || (r.Location ?? "").toLowerCase().includes(q)
+    })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-digicampus-text-primary">
-            Demandes matériel IT
-          </h1>
-          {pending > 0 && (
-            <p className="text-sm text-digicampus-warning mt-1">
-              {pending} demande{pending > 1 ? "s" : ""} en attente
-            </p>
-          )}
-          {overdue.length > 0 && (
-            <p className="text-sm text-digicampus-danger flex items-center gap-1 mt-1">
-              <AlertTriangle className="w-3 h-3" />
-              {overdue.length} location{overdue.length > 1 ? "s" : ""} non clôturée{overdue.length > 1 ? "s" : ""} à l&apos;échéance
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {["en_attente","validee","cloturee","all"].map(s => (
-            <Button
-              key={s}
-              size="sm"
-              variant={filter === s ? "default" : "outline"}
-              className={filter === s ? "bg-digicampus-primary text-white" : ""}
-              onClick={() => setFilter(s)}
-            >
-              {s === "all" ? "Toutes" : statusConfig[s]?.label ?? s}
-            </Button>
-          ))}
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-digicampus-text-primary">
+          Demandes matériel IT
+        </h1>
+        <p className="text-sm text-digicampus-text-secondary mt-1">
+          Gestion des demandes de matériel informatique
+        </p>
       </div>
 
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard
+          label="En attente"
+          value={requests.filter(r => r.Status === "en_attente").length}
+          icon={Clock}
+          iconColor="text-digicampus-warning"
+          trend="neutral"
+          trendLabel="En attente de traitement"
+        />
+        <StatCard
+          label="En cours"
+          value={requests.filter(r => r.Status === "validee").length}
+          icon={CheckCircle}
+          iconColor="text-digicampus-success"
+          trend="up"
+          trendLabel="Validées en cours"
+        />
+        <StatCard
+          label="Retards"
+          value={overdue.length}
+          icon={AlertTriangle}
+          iconColor="text-digicampus-danger"
+          trendLabel="Non clôturées"
+        />
+      </div>
+
+      {/* Table card */}
       {loading ? (
-        <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
       ) : (
-        <div className="bg-white rounded-lg border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          {/* Filter bar */}
+          <div className="flex items-center gap-3 p-4 border-b border-border">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-digicampus-text-secondary" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher par mission ou lieu…"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-2 ml-auto">
+              {["en_attente","validee","cloturee","all"].map(s => (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={filter === s ? "default" : "outline"}
+                  className={filter === s ? "bg-digicampus-primary text-white" : ""}
+                  onClick={() => setFilter(s)}
+                >
+                  {s === "all" ? "Toutes" : statusConfig[s]?.label ?? s}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>

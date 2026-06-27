@@ -77,32 +77,32 @@ func (s *Service) List(ctx context.Context, userID, role string) ([]*Booking, er
 	return s.repo.FindAll(ctx, userID, role)
 }
 
-func (s *Service) Validate(ctx context.Context, id string) error {
+func (s *Service) Validate(ctx context.Context, id string) (*Booking, error) {
 	b, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if b == nil {
-		return ErrBookingNotFound
+		return nil, ErrBookingNotFound
 	}
 	if b.Status != "en_attente" {
-		return ErrNotPending
+		return nil, ErrNotPending
 	}
-	return s.repo.UpdateStatus(ctx, id, "validee", nil)
+	return b, s.repo.UpdateStatus(ctx, id, "validee", nil)
 }
 
-func (s *Service) Refuse(ctx context.Context, id, comment string) error {
+func (s *Service) Refuse(ctx context.Context, id, comment string) (*Booking, error) {
 	b, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if b == nil {
-		return ErrBookingNotFound
+		return nil, ErrBookingNotFound
 	}
 	if b.Status != "en_attente" {
-		return ErrNotPending
+		return nil, ErrNotPending
 	}
-	return s.repo.UpdateStatus(ctx, id, "refusee", &comment)
+	return b, s.repo.UpdateStatus(ctx, id, "refusee", &comment)
 }
 
 type DirectInput struct {
@@ -151,7 +151,10 @@ func (s *Service) CreateDirect(ctx context.Context, input DirectInput, adminID s
 	if err != nil {
 		return nil, err
 	}
-	return b, s.repo.UpdateStatus(ctx, b.ID, "validee", nil)
+	if err := s.repo.UpdateStatus(ctx, b.ID, "validee", nil); err != nil {
+		return nil, err
+	}
+	return s.repo.FindByID(ctx, b.ID)
 }
 
 func (s *Service) CreateRecurring(ctx context.Context, input RecurringInput, adminID string) ([]*Booking, error) {

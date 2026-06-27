@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
+import { toast } from "sonner"
+import { StatCard } from "@/components/stat-card"
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   en_attente: { label: "En attente",  className: "bg-digicampus-warning/10 text-digicampus-warning" },
@@ -23,11 +25,11 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 }
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings]     = useState<Booking[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [refusing, setRefusing]     = useState<Booking | null>(null)
-  const [comment, setComment]       = useState("")
-  const [saving, setSaving]         = useState(false)
+  const [bookings, setBookings]         = useState<Booking[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [refusing, setRefusing]         = useState<Booking | null>(null)
+  const [comment, setComment]           = useState("")
+  const [saving, setSaving]             = useState(false)
   const [filterStatus, setFilterStatus] = useState("en_attente")
 
   async function load() {
@@ -40,15 +42,19 @@ export default function AdminBookingsPage() {
   useEffect(() => { load() }, [])
 
   async function validate(id: string) {
-    await bookingsApi.validate(id)
+    const res = await bookingsApi.validate(id)
+    if (res.error) { toast.error(res.error); return }
+    toast.success("Réservation validée")
     load()
   }
 
   async function submitRefuse() {
     if (!refusing) return
     setSaving(true)
-    await bookingsApi.refuse(refusing.ID, comment)
+    const res = await bookingsApi.refuse(refusing.ID, comment)
     setSaving(false)
+    if (res.error) { toast.error(res.error); return }
+    toast.success("Demande refusée")
     setRefusing(null)
     setComment("")
     load()
@@ -58,42 +64,90 @@ export default function AdminBookingsPage() {
     ? bookings
     : bookings.filter(b => b.Status === filterStatus)
 
-  const pending = bookings.filter(b => b.Status === "en_attente").length
+  const countPending  = bookings.filter(b => b.Status === "en_attente").length
+  const countValidee  = bookings.filter(b => b.Status === "validee").length
+  const countRefusee  = bookings.filter(b => b.Status === "refusee").length
+  const countUrgent   = bookings.filter(b => b.IsUrgent).length
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-digicampus-text-primary">
-            Demandes de réservation
-          </h1>
-          {pending > 0 && (
-            <p className="text-sm text-digicampus-warning mt-1">
-              {pending} demande{pending > 1 ? "s" : ""} en attente de validation
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {["en_attente","validee","refusee","all"].map(s => (
-            <Button
-              key={s}
-              size="sm"
-              variant={filterStatus === s ? "default" : "outline"}
-              className={filterStatus === s ? "bg-digicampus-primary text-white" : ""}
-              onClick={() => setFilterStatus(s)}
-            >
-              {s === "all" ? "Toutes" : statusConfig[s]?.label ?? s}
-            </Button>
-          ))}
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-digicampus-text-primary">
+          Demandes de réservation
+        </h1>
+        <p className="text-sm text-digicampus-text-secondary mt-1">
+          Gérez et validez les demandes de réservation de salle
+        </p>
       </div>
 
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard
+          label="En attente"
+          value={countPending}
+          icon={Clock}
+          trendLabel="À traiter"
+          trend="neutral"
+        />
+        <StatCard
+          label="Validées"
+          value={countValidee}
+          icon={CheckCircle}
+          iconColor="text-digicampus-success"
+          trendLabel="Confirmées"
+          trend="up"
+        />
+        <StatCard
+          label="Refusées"
+          value={countRefusee}
+          icon={XCircle}
+          iconColor="text-digicampus-danger"
+          trendLabel="Refusées"
+          trend="neutral"
+        />
+        <StatCard
+          label="Urgentes"
+          value={countUrgent}
+          icon={AlertTriangle}
+          iconColor="text-digicampus-danger"
+          trendLabel="Prioritaires"
+          trend="neutral"
+        />
+      </div>
+
+      {/* Table card */}
       {loading ? (
-        <div className="space-y-2">
-          {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <Skeleton className="h-8 w-64" />
+          </div>
+          <div className="p-4 space-y-2">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          {/* Filter bar */}
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <p className="text-sm font-medium text-digicampus-text-secondary">
+              {filtered.length} demande{filtered.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex gap-2">
+              {(["en_attente", "validee", "refusee", "all"] as const).map(s => (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={filterStatus === s ? "default" : "outline"}
+                  className={filterStatus === s ? "bg-digicampus-primary text-white hover:bg-digicampus-primary-dark" : ""}
+                  onClick={() => setFilterStatus(s)}
+                >
+                  {s === "all" ? "Toutes" : statusConfig[s]?.label ?? s}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -108,8 +162,8 @@ export default function AdminBookingsPage() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-digicampus-text-secondary">
-                    Aucune demande
+                  <TableCell colSpan={6} className="text-center py-12 text-digicampus-text-secondary">
+                    Aucune demande dans cette catégorie
                   </TableCell>
                 </TableRow>
               ) : (
@@ -120,12 +174,18 @@ export default function AdminBookingsPage() {
                     <TableRow key={b.ID}>
                       <TableCell className="font-medium">
                         {b.Program}
-                        {b.IsUrgent && <Badge className="ml-2 bg-digicampus-danger/10 text-digicampus-danger text-xs">Urgent</Badge>}
+                        {b.IsUrgent && (
+                          <Badge className="ml-2 bg-digicampus-danger/10 text-digicampus-danger text-xs">
+                            Urgent
+                          </Badge>
+                        )}
                       </TableCell>
-                      <TableCell>{date}</TableCell>
-                      <TableCell>{b.Duration} min</TableCell>
-                      <TableCell>{b.Participants}</TableCell>
-                      <TableCell><Badge className={s.className}>{s.label}</Badge></TableCell>
+                      <TableCell className="text-sm text-digicampus-text-secondary">{date}</TableCell>
+                      <TableCell className="text-sm text-digicampus-text-secondary">{b.Duration} min</TableCell>
+                      <TableCell className="text-sm text-digicampus-text-secondary">{b.Participants}</TableCell>
+                      <TableCell>
+                        <Badge className={s.className}>{s.label}</Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         {b.Status === "en_attente" && (
                           <div className="flex justify-end gap-2">
@@ -157,7 +217,7 @@ export default function AdminBookingsPage() {
 
       {/* Dialog refus */}
       <Dialog open={!!refusing} onOpenChange={open => !open && setRefusing(null)}>
-        <DialogContent>
+        <DialogContent className="rounded-xl">
           <DialogHeader>
             <DialogTitle>Motif de refus</DialogTitle>
           </DialogHeader>

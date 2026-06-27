@@ -92,6 +92,16 @@ func (r *Repository) FindByID(ctx context.Context, id string) (*Presence, error)
 	return p, err
 }
 
+func (r *Repository) DeleteByUserSpaceWeek(ctx context.Context, userID, spaceID, weekStart string) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM presence
+		 WHERE user_id=$1 AND space_id=$2
+		   AND date >= $3::date AND date < $3::date + interval '7 days'`,
+		userID, spaceID, weekStart,
+	)
+	return err
+}
+
 func (r *Repository) Update(ctx context.Context, id, newDate string) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE presence SET date=$1 WHERE id=$2`, newDate, id,

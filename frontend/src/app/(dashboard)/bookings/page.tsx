@@ -6,10 +6,11 @@ import { bookingsApi, type Booking } from "@/lib/api/bookings"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Plus } from "lucide-react"
+import { Plus, CalendarX, Search } from "lucide-react"
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   en_attente: { label: "En attente",  className: "bg-digicampus-warning/10 text-digicampus-warning" },
@@ -18,9 +19,19 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   annulee:    { label: "Annulée",     className: "bg-digicampus-text-secondary/10 text-digicampus-text-secondary" },
 }
 
+const STATUS_FILTERS = [
+  { value: "all",        label: "Toutes" },
+  { value: "en_attente", label: "En attente" },
+  { value: "validee",    label: "Validées" },
+  { value: "refusee",    label: "Refusées" },
+  { value: "annulee",    label: "Annulées" },
+]
+
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading]   = useState(true)
+  const [search, setSearch]     = useState("")
+  const [filter, setFilter]     = useState("all")
 
   async function load() {
     setLoading(true)
@@ -36,10 +47,19 @@ export default function BookingsPage() {
     load()
   }
 
+  const filtered = bookings
+    .filter(b => filter === "all" || b.Status === filter)
+    .filter(b => !search || b.Program.toLowerCase().includes(search.toLowerCase()))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-digicampus-text-primary">Mes réservations</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-digicampus-text-primary">Mes réservations</h1>
+          <p className="text-sm text-digicampus-text-secondary mt-1">
+            Historique et suivi de vos demandes de salle
+          </p>
+        </div>
         <Link href="/bookings/new">
           <Button className="bg-digicampus-primary hover:bg-digicampus-primary-dark text-white">
             <Plus className="w-4 h-4 mr-2" /> Nouvelle demande
@@ -48,11 +68,45 @@ export default function BookingsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 p-4 border-b border-border">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <div className="p-4 space-y-3">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          {/* Filter bar */}
+          <div className="flex items-center gap-3 p-4 border-b border-border flex-wrap">
+            <div className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-digicampus-text-secondary" />
+              <Input
+                placeholder="Rechercher par programme…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-1 bg-digicampus-neutral rounded-xl p-1">
+              {STATUS_FILTERS.map(f => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    filter === f.value
+                      ? "bg-white text-digicampus-text-primary shadow-sm"
+                      : "text-digicampus-text-secondary hover:text-digicampus-text-primary"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -66,14 +120,36 @@ export default function BookingsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bookings.length === 0 ? (
+              {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-digicampus-text-secondary">
-                    Aucune réservation — <Link href="/bookings/new" className="text-digicampus-primary hover:underline">Faire une demande</Link>
+                  <TableCell colSpan={7} className="py-16">
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="w-12 h-12 rounded-full bg-digicampus-neutral flex items-center justify-center">
+                        <CalendarX className="w-6 h-6 text-digicampus-text-secondary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-digicampus-text-primary">
+                          {search || filter !== "all" ? "Aucun résultat" : "Aucune réservation"}
+                        </p>
+                        <p className="text-xs text-digicampus-text-secondary mt-1">
+                          {search || filter !== "all"
+                            ? "Essayez d'ajuster vos filtres."
+                            : "Vous n'avez pas encore fait de demande de salle."}
+                        </p>
+                      </div>
+                      {!search && filter === "all" && (
+                        <Link href="/bookings/new">
+                          <Button size="sm" className="bg-digicampus-primary hover:bg-digicampus-primary-dark text-white gap-1.5">
+                            <Plus className="w-3.5 h-3.5" />
+                            Faire une demande
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                bookings.map(b => {
+                filtered.map(b => {
                   const s = statusConfig[b.Status] ?? { label: b.Status, className: "" }
                   const date = new Date(b.StartTime).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })
                   return (

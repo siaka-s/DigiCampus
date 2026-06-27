@@ -59,7 +59,7 @@ export default function LoginPage() {
           Bon retour&nbsp;!
         </h2>
         <p className="text-base text-digicampus-text-secondary leading-relaxed">
-          Connectez-vous à votre espace DigiCampus
+          Connectez-vous à votre espace DigiSpace
         </p>
       </div>
 

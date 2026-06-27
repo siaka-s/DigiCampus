@@ -31,6 +31,7 @@ type Request struct {
 	Status      string
 	Comment     *string
 	CreatedAt   time.Time
+	UserEmail   string
 }
 
 type Repository struct{ db *pgxpool.Pool }
@@ -90,7 +91,7 @@ func (r *Repository) CreateRequest(ctx context.Context, req *Request) (*Request,
 func (r *Repository) FindRequests(ctx context.Context, userID, role string) ([]*Request, error) {
 	var rows pgx.Rows
 	var err error
-	if role == "admin" || role == "super_admin" || role == "admin_it" {
+	if role == "admin" || role == "super_admin" {
 		rows, err = r.db.Query(ctx,
 			`SELECT id, equipment_id, user_id, type, mission, location, start_date, end_date, status, comment, created_at
 			 FROM equipment_requests ORDER BY created_at DESC`)
@@ -118,10 +119,15 @@ func (r *Repository) FindRequests(ctx context.Context, userID, role string) ([]*
 func (r *Repository) FindRequestByID(ctx context.Context, id string) (*Request, error) {
 	req := &Request{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, equipment_id, user_id, type, mission, location, start_date, end_date, status, comment, created_at
-		 FROM equipment_requests WHERE id=$1`, id,
+		`SELECT er.id, er.equipment_id, er.user_id, er.type, er.mission, er.location,
+		        er.start_date, er.end_date, er.status, er.comment, er.created_at,
+		        COALESCE(u.email, '') AS user_email
+		 FROM equipment_requests er
+		 LEFT JOIN users u ON u.id = er.user_id
+		 WHERE er.id=$1`, id,
 	).Scan(&req.ID, &req.EquipmentID, &req.UserID, &req.Type, &req.Mission,
-		&req.Location, &req.StartDate, &req.EndDate, &req.Status, &req.Comment, &req.CreatedAt)
+		&req.Location, &req.StartDate, &req.EndDate, &req.Status, &req.Comment, &req.CreatedAt,
+		&req.UserEmail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

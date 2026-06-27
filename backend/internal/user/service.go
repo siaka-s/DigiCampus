@@ -19,11 +19,10 @@ var (
 )
 
 var validRoles = map[string]bool{
-	"super_admin":              true,
-	"admin":                    true,
-	"admin_it":                 true,
-	"collaborateur_digifemmes": true,
-	"collaborateur_partenaire": true,
+	"super_admin":   true,
+	"admin":         true,
+	"collaborateur": true,
+	"partenaire":    true,
 }
 
 type Service struct {
@@ -59,7 +58,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) error {
 		return err
 	}
 
-	_, err = s.repo.Create(ctx, input.Email, string(hash), "collaborateur_digifemmes")
+	_, err = s.repo.Create(ctx, input.Email, string(hash), "collaborateur")
 	return err
 }
 
@@ -93,8 +92,16 @@ func (s *Service) ListUsers(ctx context.Context) ([]*User, error) {
 	return s.repo.FindAll(ctx)
 }
 
-func (s *Service) ActivateUser(ctx context.Context, id string) error {
-	return s.repo.SetActive(ctx, id, true)
+// ActivateUser active le compte et retourne l'email de l'utilisateur pour l'envoi de notification.
+func (s *Service) ActivateUser(ctx context.Context, id string) (string, error) {
+	if err := s.repo.SetActive(ctx, id, true); err != nil {
+		return "", err
+	}
+	u, err := s.repo.FindByID(ctx, id)
+	if err != nil || u == nil {
+		return "", err
+	}
+	return u.Email, nil
 }
 
 func (s *Service) DeactivateUser(ctx context.Context, id string) error {

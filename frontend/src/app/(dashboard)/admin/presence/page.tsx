@@ -6,7 +6,7 @@ import { presenceApi, type Presence } from "@/lib/api/presence"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertTriangle, Users } from "lucide-react"
 
 const DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
@@ -50,15 +50,15 @@ export default function AdminPresencePage() {
     setLoading(true)
     const spacesRes = await spacesApi.list()
     const sharedBureaux = (spacesRes.data ?? []).filter(
-      s => s.IsActive && s.Type === "bureau_partage"
+      s => s.is_active && s.type === "bureau_partage"
     )
     setBureaux(sharedBureaux)
 
     const presenceMap: Record<string, Presence[]> = {}
     await Promise.all(
       sharedBureaux.map(async b => {
-        const res = await presenceApi.getBySpace(b.ID, weekStart)
-        presenceMap[b.ID] = res.data ?? []
+        const res = await presenceApi.getBySpace(b.id, weekStart)
+        presenceMap[b.id] = res.data ?? []
       })
     )
     setPresences(presenceMap)
@@ -71,83 +71,161 @@ export default function AdminPresencePage() {
     return (presences[spaceID] ?? []).filter(p => p.Date.startsWith(date)).length
   }
 
+  function usersForDay(spaceID: string, date: string): Presence[] {
+    return (presences[spaceID] ?? []).filter(p => p.Date.startsWith(date))
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-digicampus-text-primary">
-          Présences par bureau
-        </h1>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => setMonday(m => { const n = new Date(m); n.setDate(n.getDate() - 7); return n })}>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-digicampus-text-primary">
+            Présences par bureau
+          </h1>
+          <p className="text-sm text-digicampus-text-secondary mt-1">
+            Présences déclarées par bureau pour la semaine sélectionnée
+          </p>
+        </div>
+
+        {/* Week navigation — pill style */}
+        <div className="flex items-center gap-2 bg-white border border-border rounded-xl shadow-sm px-2 py-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 rounded-lg"
+            onClick={() => setMonday(m => { const n = new Date(m); n.setDate(n.getDate() - 7); return n })}
+          >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-sm font-medium min-w-52 text-center">{displayWeek(monday)}</span>
-          <Button variant="outline" size="sm" onClick={() => setMonday(m => { const n = new Date(m); n.setDate(n.getDate() + 7); return n })}>
+          <span className="text-sm font-medium min-w-52 text-center text-digicampus-text-primary">
+            {displayWeek(monday)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 rounded-lg"
+            onClick={() => setMonday(m => { const n = new Date(m); n.setDate(n.getDate() + 7); return n })}
+          >
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
         </div>
       ) : bureaux.length === 0 ? (
-        <p className="text-sm text-digicampus-text-secondary py-8 text-center">
-          Aucun bureau partagé actif
-        </p>
+        <div className="rounded-xl border border-border bg-white shadow-sm p-12 text-center">
+          <div className="w-12 h-12 rounded-full bg-digicampus-neutral flex items-center justify-center mx-auto mb-3">
+            <Users className="w-6 h-6 text-digicampus-text-secondary" />
+          </div>
+          <p className="text-sm text-digicampus-text-secondary">Aucun bureau partagé actif</p>
+        </div>
       ) : (
-        <div className="bg-white rounded-lg border border-border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-digicampus-text-secondary font-medium w-40">Bureau</th>
-                <th className="px-4 py-3 text-digicampus-text-secondary font-medium text-center">Places</th>
-                {days.map((day, i) => (
-                  <th key={formatDate(day)} className="px-3 py-3 text-digicampus-text-secondary font-normal text-center min-w-20">
-                    <div>{DAYS_FR[i]}</div>
-                    <div className="text-xs">{day.getDate()}/{day.getMonth()+1}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {bureaux.map(bureau => (
-                <tr key={bureau.ID} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-digicampus-text-primary">{bureau.Name}</td>
-                  <td className="px-4 py-3 text-center text-digicampus-text-secondary">{bureau.Seats}</td>
-                  {days.map(day => {
-                    const dateStr = formatDate(day)
-                    const count = countForDay(bureau.ID, dateStr)
-                    const isOver = count > bureau.Seats && bureau.Seats > 0
-                    const isFull = count === bureau.Seats && bureau.Seats > 0
+        <div className="space-y-4">
+          {bureaux.map(bureau => {
+            const totalPresents = Math.max(...days.map(d => countForDay(bureau.id, formatDate(d))), 0)
+            const peakCount     = days.reduce((max, d) => Math.max(max, countForDay(bureau.id, formatDate(d))), 0)
+            const isOver        = peakCount > bureau.seats && bureau.seats > 0
+            const occupancyPct  = bureau.seats > 0 ? Math.round((peakCount / bureau.seats) * 100) : 0
+
+            return (
+              <div key={bureau.id} className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+                {/* Bureau header */}
+                <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-border">
+                  <div>
+                    <h2 className="text-base font-semibold text-digicampus-text-primary">{bureau.name}</h2>
+                    <p className="text-xs text-digicampus-text-secondary mt-0.5">
+                      {bureau.seats} place{bureau.seats > 1 ? "s" : ""} assise{bureau.seats > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  {/* Seat count indicator */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <p className={`text-sm font-semibold ${isOver ? "text-digicampus-danger" : "text-digicampus-text-primary"}`}>
+                        {peakCount} / {bureau.seats}
+                      </p>
+                      <p className="text-xs text-digicampus-text-secondary">max cette semaine</p>
+                    </div>
+                    <div className="w-20 h-1.5 bg-digicampus-neutral rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${isOver ? "bg-digicampus-danger" : "bg-digicampus-primary"}`}
+                        style={{ width: `${Math.min(occupancyPct, 100)}%` }}
+                      />
+                    </div>
+                    {isOver && (
+                      <Badge className="bg-digicampus-danger/10 text-digicampus-danger text-xs border-0">
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        Suroccupé
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Day grid */}
+                <div className="grid grid-cols-7 gap-px bg-border">
+                  {days.map((day, i) => {
+                    const dateStr  = formatDate(day)
+                    const count    = countForDay(bureau.id, dateStr)
+                    const users    = usersForDay(bureau.id, dateStr)
+                    const dayOver  = count > bureau.seats && bureau.seats > 0
+                    const dayFull  = count === bureau.seats && bureau.seats > 0
+                    const isToday  = formatDate(new Date()) === dateStr
+
                     return (
-                      <td key={dateStr} className="px-3 py-3 text-center">
+                      <div key={dateStr} className="bg-white px-2 py-3 flex flex-col items-center gap-1.5 min-h-24">
+                        {/* Day label */}
+                        <div className="text-center">
+                          <p className={`text-xs font-medium ${isToday ? "text-digicampus-primary" : "text-digicampus-text-secondary"}`}>
+                            {DAYS_FR[i]}
+                          </p>
+                          <p className={`text-sm font-semibold mt-0.5 ${isToday ? "text-digicampus-primary" : "text-digicampus-text-primary"}`}>
+                            {day.getDate()}/{day.getMonth() + 1}
+                          </p>
+                        </div>
+
+                        {/* Count badge */}
                         {count > 0 ? (
-                          <div className="flex flex-col items-center gap-1">
+                          <div className="flex flex-col items-center gap-1 w-full">
                             <Badge
-                              className={
-                                isOver
+                              className={`text-xs font-semibold border-0 ${
+                                dayOver
                                   ? "bg-digicampus-danger/10 text-digicampus-danger"
-                                  : isFull
+                                  : dayFull
                                   ? "bg-digicampus-warning/10 text-digicampus-warning"
                                   : "bg-digicampus-success/10 text-digicampus-success"
-                              }
+                              }`}
                             >
-                              {count}
+                              {count} présent{count > 1 ? "s" : ""}
                             </Badge>
-                            {isOver && <AlertTriangle className="w-3 h-3 text-digicampus-danger" />}
+                            {/* Colored dots per user */}
+                            <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
+                              {users.slice(0, 6).map((p, idx) => (
+                                <div
+                                  key={p.ID ?? idx}
+                                  title={p.UserName ?? "Collaborateur"}
+                                  className={`w-2 h-2 rounded-full ${
+                                    dayOver ? "bg-digicampus-danger" : "bg-digicampus-primary"
+                                  }`}
+                                />
+                              ))}
+                              {users.length > 6 && (
+                                <span className="text-xs text-digicampus-text-secondary">+{users.length - 6}</span>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-digicampus-text-secondary text-xs">—</span>
                         )}
-                      </td>
+                      </div>
                     )
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

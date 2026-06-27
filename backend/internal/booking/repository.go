@@ -21,6 +21,8 @@ type Booking struct {
 	IsUrgent     bool
 	Comment      *string
 	CreatedAt    time.Time
+	UserEmail    string
+	SpaceName    string
 }
 
 type Repository struct {
@@ -74,10 +76,17 @@ func (r *Repository) FindAll(ctx context.Context, userID, role string) ([]*Booki
 func (r *Repository) FindByID(ctx context.Context, id string) (*Booking, error) {
 	b := &Booking{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, space_id, user_id, program, start_time, duration, participants, status, is_urgent, comment, created_at
-		 FROM bookings WHERE id=$1`, id,
+		`SELECT b.id, b.space_id, b.user_id, b.program, b.start_time, b.duration,
+		        b.participants, b.status, b.is_urgent, b.comment, b.created_at,
+		        COALESCE(u.email, '') AS user_email,
+		        COALESCE(s.name, '')  AS space_name
+		 FROM bookings b
+		 LEFT JOIN users  u ON u.id = b.user_id
+		 LEFT JOIN spaces s ON s.id = b.space_id
+		 WHERE b.id=$1`, id,
 	).Scan(&b.ID, &b.SpaceID, &b.UserID, &b.Program, &b.StartTime,
-		&b.Duration, &b.Participants, &b.Status, &b.IsUrgent, &b.Comment, &b.CreatedAt)
+		&b.Duration, &b.Participants, &b.Status, &b.IsUrgent, &b.Comment, &b.CreatedAt,
+		&b.UserEmail, &b.SpaceName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

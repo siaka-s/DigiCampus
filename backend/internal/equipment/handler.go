@@ -1,17 +1,27 @@
 package equipment
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
+	"github.com/digifemmes/digicampus/internal/notification"
+	"github.com/digifemmes/digicampus/pkg/mailer"
 	"github.com/digifemmes/digicampus/pkg/middleware"
 )
 
-type Handler struct{ svc *Service }
+type Handler struct {
+	svc      *Service
+	notifSvc *notification.Service
+}
 
-func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
+func NewHandler(svc *Service, notifSvc *notification.Service) *Handler {
+	return &Handler{svc: svc, notifSvc: notifSvc}
+}
 
 func writeJSON(w http.ResponseWriter, status int, data any, errMsg string) {
 	w.Header().Set("Content-Type", "application/json")
@@ -58,7 +68,7 @@ func (h *Handler) UpdateEquipment(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "équipement mis à jour")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) CreateRequest(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +101,8 @@ func (h *Handler) ListRequests(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ValidateRequest(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if err := h.svc.Validate(r.Context(), id); err != nil {
+	req, err := h.svc.Validate(r.Context(), id)
+	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, nil, err.Error())
 			return
@@ -104,7 +115,29 @@ func (h *Handler) ValidateRequest(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "demande validée")
+	go func() {
+		refID := req.ID
+		label := "Mission interne"
+		if req.Type == "location_externe" {
+			label = "Location externe"
+		}
+		h.notifSvc.Create(context.Background(), req.UserID, "equipment_validated",
+			fmt.Sprintf("Votre demande de matériel (%s) a été validée.", label), &refID)
+		prenom := strings.Split(req.UserEmail, "@")[0]
+		mission := ""
+		if req.Mission != nil {
+			mission = *req.Mission
+		}
+		subj, html := mailer.DemandeITValidee(
+			prenom, req.Type, mission,
+			req.StartDate.Format("02/01/2006"),
+			req.EndDate.Format("02/01/2006"),
+		)
+		if err := mailer.Send(req.UserEmail, subj, html); err != nil {
+			slog.Warn("email demande IT validée", "erreur", err)
+		}
+	}()
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) RefuseRequest(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +149,8 @@ func (h *Handler) RefuseRequest(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, nil, "corps invalide")
 		return
 	}
-	if err := h.svc.Refuse(r.Context(), id, body.Comment); err != nil {
+	req, err := h.svc.Refuse(r.Context(), id, body.Comment)
+	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, nil, err.Error())
 			return
@@ -129,7 +163,24 @@ func (h *Handler) RefuseRequest(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "demande refusée")
+	go func() {
+		refID := req.ID
+		label := "Mission interne"
+		if req.Type == "location_externe" {
+			label = "Location externe"
+		}
+		msg := fmt.Sprintf("Votre demande de matériel (%s) a été refusée.", label)
+		if body.Comment != "" {
+			msg += " Motif : " + body.Comment
+		}
+		h.notifSvc.Create(context.Background(), req.UserID, "equipment_refused", msg, &refID)
+		prenom := strings.Split(req.UserEmail, "@")[0]
+		subj, html := mailer.DemandeITRefusee(prenom, req.Type, body.Comment)
+		if err := mailer.Send(req.UserEmail, subj, html); err != nil {
+			slog.Warn("email demande IT refusée", "erreur", err)
+		}
+	}()
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) CloseRental(w http.ResponseWriter, r *http.Request) {
@@ -143,7 +194,7 @@ func (h *Handler) CloseRental(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "location clôturée")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) GetOverdueRentals(w http.ResponseWriter, r *http.Request) {
@@ -152,6 +203,23 @@ func (h *Handler) GetOverdueRentals(w http.ResponseWriter, r *http.Request) {
 		slog.Error("get overdue rentals", "erreur", err)
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
+	}
+	if len(items) > 0 {
+		go func() {
+			adminEmails, _ := h.svc.GetAdminITEmails(r.Context())
+			for _, item := range items {
+				collaborateur := strings.Split(item.UserEmail, "@")[0]
+				for _, email := range adminEmails {
+					subj, html := mailer.AlerteRetourMateriel(
+						email, item.Type, collaborateur,
+						item.EndDate.Format("02/01/2006"),
+					)
+					if err := mailer.Send(email, subj, html); err != nil {
+						slog.Warn("email alerte retour matériel", "erreur", err)
+					}
+				}
+			}
+		}()
 	}
 	writeJSON(w, http.StatusOK, items, "")
 }

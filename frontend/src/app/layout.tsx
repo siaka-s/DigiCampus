@@ -6,7 +6,7 @@ import { Providers } from "@/components/providers"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "DigiCampus",
+  title: "DigiSpace",
   description: "Plateforme de gestion des espaces et du matériel — DigiFemmes Côte d'Ivoire",
 }
 

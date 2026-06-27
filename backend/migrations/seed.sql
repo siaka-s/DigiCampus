@@ -1,5 +1,5 @@
 -- Utilisateurs de test
--- Mot de passe pour tous : "password123" (hash bcrypt)
+-- Mot de passe pour tous : "password" (hash bcrypt)
 INSERT INTO users (id, email, password_hash, role, department, is_active) VALUES
     ('00000000-0000-0000-0000-000000000001', 'superadmin@digifemmes.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin', NULL, TRUE),
     ('00000000-0000-0000-0000-000000000002', 'admin@digifemmes.com',      '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, TRUE),

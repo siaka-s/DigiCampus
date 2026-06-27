@@ -106,3 +106,41 @@ func (r *Repository) UpdateDepartment(ctx context.Context, id string, department
 	)
 	return err
 }
+
+func (r *Repository) FindAdminITEmails(ctx context.Context) ([]string, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT email FROM users WHERE role IN ('admin','super_admin') AND is_active = true`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var emails []string
+	for rows.Next() {
+		var e string
+		if err := rows.Scan(&e); err != nil {
+			return nil, err
+		}
+		emails = append(emails, e)
+	}
+	return emails, nil
+}
+
+func (r *Repository) FindAdminEmails(ctx context.Context) ([]string, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT email FROM users WHERE role IN ('admin','super_admin') AND is_active = true`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var emails []string
+	for rows.Next() {
+		var e string
+		if err := rows.Scan(&e); err != nil {
+			return nil, err
+		}
+		emails = append(emails, e)
+	}
+	return emails, nil
+}

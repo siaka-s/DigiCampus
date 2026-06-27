@@ -3,6 +3,7 @@ package space
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -76,7 +77,7 @@ func (h *Handler) UpdateSpace(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "espace mis à jour")
+	writeJSON(w, http.StatusOK, nil, "")
 }
 
 func (h *Handler) GetOccupancy(w http.ResponseWriter, r *http.Request) {
@@ -112,12 +113,34 @@ func (h *Handler) GetOccupancyWeek(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, items, "")
 }
 
+func (h *Handler) GetOccupancyMonth(w http.ResponseWriter, r *http.Request) {
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		now := time.Now()
+		month = fmt.Sprintf("%d-%02d", now.Year(), now.Month())
+	}
+	items, err := h.svc.GetOccupancyMonth(r.Context(), month)
+	if err != nil {
+		slog.Error("get occupancy month", "erreur", err)
+		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
+		return
+	}
+	writeJSON(w, http.StatusOK, items, "")
+}
+
 func (h *Handler) GetAvailable(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	startTime, _ := time.Parse(time.RFC3339, q.Get("start_time"))
-	duration, _ := strconv.Atoi(q.Get("duration"))
+
+	// JavaScript envoie le format RFC3339Nano (avec millisecondes)
+	startTime, err := time.Parse(time.RFC3339Nano, q.Get("start_time"))
+	if err != nil {
+		startTime, _ = time.Parse(time.RFC3339, q.Get("start_time"))
+	}
+	duration, _     := strconv.Atoi(q.Get("duration"))
 	participants, _ := strconv.Atoi(q.Get("participants"))
-	spaces, err := h.svc.FindAvailable(r.Context(), startTime, duration, participants)
+	endDate         := q.Get("end_date") // optionnel — vide = journée unique
+
+	spaces, err := h.svc.FindAvailable(r.Context(), startTime, duration, participants, endDate)
 	if err != nil {
 		slog.Error("find available", "erreur", err)
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
@@ -133,5 +156,5 @@ func (h *Handler) DeactivateSpace(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, nil, "erreur serveur")
 		return
 	}
-	writeJSON(w, http.StatusOK, nil, "espace désactivé")
+	writeJSON(w, http.StatusOK, nil, "")
 }

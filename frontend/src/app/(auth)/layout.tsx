@@ -10,9 +10,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="mb-10 text-center">
             <div className="flex items-center justify-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-digicampus-primary flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-sm tracking-tight">DC</span>
+                <span className="text-white font-bold text-sm tracking-tight">DS</span>
               </div>
-              <span className="text-2xl font-bold tracking-tight text-digicampus-text-primary">DigiCampus</span>
+              <span className="text-2xl font-bold tracking-tight text-digicampus-text-primary">DigiSpace</span>
             </div>
             <p className="text-sm text-digicampus-text-secondary tracking-wide">
               DigiFemmes Côte d&apos;Ivoire

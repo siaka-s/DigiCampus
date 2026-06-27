@@ -9,8 +9,8 @@ export type Presence = {
 }
 
 export const presenceApi = {
-  declare: (space_id: string, dates: string[]) =>
-    apiClient.post<Presence[]>("/api/v1/presence", { space_id, dates }),
+  declare: (space_id: string, week: string, dates: string[]) =>
+    apiClient.post<Presence[]>("/api/v1/presence", { space_id, week, dates }),
 
   getBySpace: (space_id: string, week: string) =>
     apiClient.get<Presence[]>(`/api/v1/presence?space_id=${space_id}&week=${week}`),

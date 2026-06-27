@@ -93,10 +93,10 @@ export function AuthSlideshow() {
         {/* Top branding */}
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-            <span className="text-white font-bold text-xs tracking-tight">DC</span>
+            <span className="text-white font-bold text-xs tracking-tight">DS</span>
           </div>
           <div>
-            <p className="text-white font-semibold text-sm leading-none">DigiCampus</p>
+            <p className="text-white font-semibold text-sm leading-none">DigiSpace</p>
             <p className="text-white/60 text-xs mt-0.5">DigiFemmes Côte d&apos;Ivoire</p>
           </div>
         </div>

@@ -8,17 +8,24 @@ type ApiResponse<T> = {
   message: string
 }
 
-// Cache la session 60s — évite un getSession() par requête API
+// Cache la session 60s — déduplique les appels concurrents (un seul getSession() à la fois)
 let _session: Awaited<ReturnType<typeof getSession>> | undefined
 let _sessionExpiry = 0
+let _sessionPromise: Promise<Awaited<ReturnType<typeof getSession>>> | null = null
 
 async function getCachedSession() {
   if (_session !== undefined && Date.now() < _sessionExpiry) {
     return _session
   }
-  _session = await getSession()
-  _sessionExpiry = Date.now() + 60_000
-  return _session
+  if (!_sessionPromise) {
+    _sessionPromise = getSession().then(s => {
+      _session = s
+      _sessionExpiry = Date.now() + 60_000
+      _sessionPromise = null
+      return s
+    })
+  }
+  return _sessionPromise
 }
 
 async function request<T>(
@@ -48,7 +55,11 @@ async function request<T>(
     return { data: null, error: "Accès refusé", message: "" }
   }
 
-  return res.json()
+  try {
+    return await res.json()
+  } catch {
+    return { data: null, error: `Erreur serveur (${res.status})`, message: "" }
+  }
 }
 
 export const apiClient = {
