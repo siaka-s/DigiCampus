@@ -87,7 +87,20 @@ docker compose logs --tail=50
 
 ---
 
-## 5. Configurer le déploiement automatique (GitHub Actions)
+## 5. Créer le compte administrateur
+
+À exécuter **une seule fois** après le premier démarrage :
+
+```bash
+cd /opt/digicampus
+bash scripts/create-admin.sh
+```
+
+Le script demande un mot de passe (saisi deux fois, jamais affiché ni stocké), crée le compte `siaka@digifemmes.com` et lui attribue le rôle `super_admin` automatiquement.
+
+---
+
+## 6. Configurer le déploiement automatique (GitHub Actions)
 
 Sur GitHub → **Settings → Secrets and variables → Actions**, ajouter :
 
@@ -114,6 +127,9 @@ cat ~/.ssh/digicampus_deploy
 ## Commandes utiles
 
 ```bash
+# Mettre à jour depuis Git et redéployer (script tout-en-un)
+cd /opt/digicampus && ./deploy.sh
+
 # Voir les logs en temps réel
 docker compose logs -f
 
@@ -124,8 +140,8 @@ docker compose logs -f frontend
 # Redémarrer un service sans rebuild
 docker compose restart backend
 
-# Mettre à jour manuellement (sans attendre un push)
-cd /opt/digicampus && git pull && docker compose up -d --build
+# Mettre à jour manuellement étape par étape
+cd /opt/digicampus && git pull && docker compose up -d --build --no-deps backend frontend caddy
 
 # Sauvegarder la base de données
 docker compose exec postgres pg_dump -U digicampus digicampus > backup_$(date +%Y%m%d).sql
