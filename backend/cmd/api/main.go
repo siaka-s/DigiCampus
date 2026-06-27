@@ -8,12 +8,16 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/digifemmes/digicampus/internal/booking"
+	"github.com/digifemmes/digicampus/internal/department"
 	"github.com/digifemmes/digicampus/internal/equipment"
+	"github.com/digifemmes/digicampus/internal/event"
+	"github.com/digifemmes/digicampus/internal/notification"
 	"github.com/digifemmes/digicampus/internal/photo"
 	"github.com/digifemmes/digicampus/internal/presence"
 	"github.com/digifemmes/digicampus/internal/space"
 	"github.com/digifemmes/digicampus/internal/user"
 	"github.com/digifemmes/digicampus/pkg/database"
+	"github.com/digifemmes/digicampus/pkg/logger"
 	"github.com/digifemmes/digicampus/pkg/middleware"
 )
 
@@ -26,12 +30,9 @@ var requiredEnvVars = []string{
 }
 
 func main() {
-	// Logs lisibles en développement
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	})))
+	logger.Setup()
 
-	slog.Info("DigiCampus — démarrage du serveur")
+	slog.Info("DigiSpace — démarrage du serveur")
 
 	if err := godotenv.Load(); err != nil {
 		slog.Warn("pas de fichier .env trouvé, utilisation des variables système")
@@ -55,9 +56,13 @@ func main() {
 	defer pool.Close()
 	slog.Info("base de données connectée")
 
+	notifRepo    := notification.NewRepository(pool)
+	notifSvc     := notification.NewService(notifRepo)
+	notifHandler := notification.NewHandler(notifSvc)
+
 	userRepo := user.NewRepository(pool)
 	userSvc := user.NewService(userRepo)
-	userHandler := user.NewHandler(userSvc)
+	userHandler := user.NewHandler(userSvc, notifSvc)
 
 	mux := http.NewServeMux()
 
@@ -83,29 +88,21 @@ func main() {
 	spaceSvc     := space.NewService(spaceRepo)
 	spaceHandler := space.NewHandler(spaceSvc)
 
-	// Lecture espaces — tous les connectés
-	privateMux := http.NewServeMux()
-	privateMux.HandleFunc("GET /api/v1/spaces", spaceHandler.GetSpaces)
-	privateMux.HandleFunc("GET /api/v1/spaces/occupancy", spaceHandler.GetOccupancy)
-	privateMux.HandleFunc("GET /api/v1/spaces/occupancy/week", spaceHandler.GetOccupancyWeek)
-	mux.Handle("/api/v1/spaces", middleware.Auth(privateMux))
-	mux.Handle("/api/v1/spaces/occupancy", middleware.Auth(privateMux))
-	mux.Handle("/api/v1/spaces/occupancy/week", middleware.Auth(privateMux))
-
-	// Écriture espaces — admin uniquement
-	spaceAdminMux := http.NewServeMux()
-	spaceAdminMux.HandleFunc("POST /api/v1/spaces", spaceHandler.CreateSpace)
-	spaceAdminMux.HandleFunc("PATCH /api/v1/spaces/{id}", spaceHandler.UpdateSpace)
-	spaceAdminMux.HandleFunc("PATCH /api/v1/spaces/{id}/deactivate", spaceHandler.DeactivateSpace)
-	mux.Handle("/api/v1/spaces/", middleware.Auth(middleware.RequireRole("admin", "super_admin")(spaceAdminMux)))
-
-	// Disponibilité des salles — tous les connectés
-	mux.Handle("/api/v1/spaces/available", middleware.Auth(http.HandlerFunc(spaceHandler.GetAvailable)))
+	// Routes espaces — méthodes explicites pour éviter tout conflit exact/préfixe
+	adminRole := middleware.RequireRole("admin", "super_admin")
+	mux.Handle("GET /api/v1/spaces",                    middleware.Auth(http.HandlerFunc(spaceHandler.GetSpaces)))
+	mux.Handle("POST /api/v1/spaces",                   middleware.Auth(adminRole(http.HandlerFunc(spaceHandler.CreateSpace))))
+	mux.Handle("GET /api/v1/spaces/occupancy",          middleware.Auth(http.HandlerFunc(spaceHandler.GetOccupancy)))
+	mux.Handle("GET /api/v1/spaces/occupancy/week",     middleware.Auth(adminRole(http.HandlerFunc(spaceHandler.GetOccupancyWeek))))
+	mux.Handle("GET /api/v1/spaces/occupancy/month",    middleware.Auth(http.HandlerFunc(spaceHandler.GetOccupancyMonth)))
+	mux.Handle("GET /api/v1/spaces/available",          middleware.Auth(http.HandlerFunc(spaceHandler.GetAvailable)))
+	mux.Handle("PATCH /api/v1/spaces/{id}/deactivate",  middleware.Auth(adminRole(http.HandlerFunc(spaceHandler.DeactivateSpace))))
+	mux.Handle("PATCH /api/v1/spaces/{id}",             middleware.Auth(adminRole(http.HandlerFunc(spaceHandler.UpdateSpace))))
 
 	// Réservations
 	bookingRepo    := booking.NewRepository(pool)
 	bookingSvc     := booking.NewService(bookingRepo, spaceRepo)
-	bookingHandler := booking.NewHandler(bookingSvc)
+	bookingHandler := booking.NewHandler(bookingSvc, notifSvc)
 
 	bookingMux := http.NewServeMux()
 	bookingMux.HandleFunc("POST /api/v1/bookings", bookingHandler.Create)
@@ -125,7 +122,7 @@ func main() {
 	mux.Handle("/api/v1/bookings/", middleware.Auth(bookingAdminMux))
 
 	presenceRepo    := presence.NewRepository(pool)
-	presenceSvc     := presence.NewService(presenceRepo, spaceRepo)
+	presenceSvc     := presence.NewService(presenceRepo, spaceRepo, userRepo)
 	presenceHandler := presence.NewHandler(presenceSvc)
 
 	presenceMux := http.NewServeMux()
@@ -140,8 +137,8 @@ func main() {
 	mux.Handle("/api/v1/presence/", middleware.Auth(presenceMux))
 
 	equipmentRepo    := equipment.NewRepository(pool)
-	equipmentSvc     := equipment.NewService(equipmentRepo)
-	equipmentHandler := equipment.NewHandler(equipmentSvc)
+	equipmentSvc     := equipment.NewService(equipmentRepo, userRepo)
+	equipmentHandler := equipment.NewHandler(equipmentSvc, notifSvc)
 
 	// Lecture équipements — tous les connectés
 	eqReadMux := http.NewServeMux()
@@ -164,8 +161,24 @@ func main() {
 	eqAdminMux.HandleFunc("PATCH /api/v1/equipment/requests/{id}/refuse", equipmentHandler.RefuseRequest)
 	eqAdminMux.HandleFunc("PATCH /api/v1/equipment/rentals/{id}/close", equipmentHandler.CloseRental)
 	eqAdminMux.HandleFunc("GET /api/v1/equipment/overdue", equipmentHandler.GetOverdueRentals)
-	mux.Handle("/api/v1/equipment/overdue", middleware.Auth(middleware.RequireRole("admin", "super_admin", "admin_it")(eqAdminMux)))
-	mux.Handle("/api/v1/equipment/", middleware.Auth(middleware.RequireRole("admin", "super_admin", "admin_it")(eqAdminMux)))
+	mux.Handle("/api/v1/equipment/overdue", middleware.Auth(middleware.RequireRole("admin", "super_admin")(eqAdminMux)))
+	mux.Handle("/api/v1/equipment/", middleware.Auth(middleware.RequireRole("admin", "super_admin")(eqAdminMux)))
+
+	// Départements — GET public (dropdown inscription), mutations admin
+	deptRepo    := department.NewRepository(pool)
+	deptSvc     := department.NewService(deptRepo)
+	deptHandler := department.NewHandler(deptSvc)
+
+	mux.HandleFunc("GET /api/v1/departments", deptHandler.ListActive)
+
+	deptAdminMux := http.NewServeMux()
+	deptAdminMux.HandleFunc("GET /api/v1/departments/all", deptHandler.List)
+	deptAdminMux.HandleFunc("POST /api/v1/departments", deptHandler.Create)
+	deptAdminMux.HandleFunc("PATCH /api/v1/departments/{id}", deptHandler.Update)
+	deptAdminMux.HandleFunc("PATCH /api/v1/departments/{id}/deactivate", deptHandler.Deactivate)
+	deptAdminMux.HandleFunc("PATCH /api/v1/departments/{id}/activate", deptHandler.Activate)
+	mux.Handle("/api/v1/departments/all", middleware.Auth(middleware.RequireRole("admin", "super_admin")(deptAdminMux)))
+	mux.Handle("/api/v1/departments/", middleware.Auth(middleware.RequireRole("admin", "super_admin")(deptAdminMux)))
 
 	// Photos campus — GET public, mutations admin
 	photoRepo    := photo.NewRepository(pool)
@@ -183,9 +196,34 @@ func main() {
 	// Fichiers statiques uploads
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
-	slog.Info("routes enregistrées", "modules", "auth · users · spaces · bookings · presence · equipment · photos")
+	// Événements campus
+	eventRepo    := event.NewRepository(pool)
+	eventSvc     := event.NewService(eventRepo)
+	eventHandler := event.NewHandler(eventSvc)
 
-	handler := middleware.Security(middleware.CORS(mux))
+	mux.Handle("GET /api/v1/events", middleware.Auth(http.HandlerFunc(eventHandler.List)))
+
+	eventAdminMux := http.NewServeMux()
+	eventAdminMux.HandleFunc("GET /api/v1/events/all",               eventHandler.ListAll)
+	eventAdminMux.HandleFunc("POST /api/v1/events",                  eventHandler.Create)
+	eventAdminMux.HandleFunc("PATCH /api/v1/events/{id}/publish",    eventHandler.Publish)
+	eventAdminMux.HandleFunc("PATCH /api/v1/events/{id}/unpublish",  eventHandler.Unpublish)
+	eventAdminMux.HandleFunc("PATCH /api/v1/events/{id}",            eventHandler.Update)
+	eventAdminMux.HandleFunc("DELETE /api/v1/events/{id}",           eventHandler.Delete)
+	mux.Handle("/api/v1/events/all", middleware.Auth(middleware.RequireRole("admin", "super_admin")(eventAdminMux)))
+	mux.Handle("/api/v1/events/",    middleware.Auth(middleware.RequireRole("admin", "super_admin")(eventAdminMux)))
+
+	// Notifications — lecture + marquage
+	notifMux := http.NewServeMux()
+	notifMux.HandleFunc("GET /api/v1/notifications", notifHandler.List)
+	notifMux.HandleFunc("PATCH /api/v1/notifications/read-all", notifHandler.MarkAllRead)
+	notifMux.HandleFunc("PATCH /api/v1/notifications/{id}/read", notifHandler.MarkRead)
+	mux.Handle("/api/v1/notifications", middleware.Auth(notifMux))
+	mux.Handle("/api/v1/notifications/", middleware.Auth(notifMux))
+
+	slog.Info("routes enregistrées", "modules", "auth · users · spaces · bookings · presence · equipment · photos · departments · notifications · events")
+
+	handler := middleware.RequestLogger(middleware.Security(middleware.CORS(mux)))
 
 	addr := ":" + os.Getenv("PORT")
 	slog.Info("─────────────────────────────────────────")
